@@ -596,9 +596,19 @@ if ('mediaSession' in navigator) {
   mh('pause', function () { deberia = false; audio.pause(); });
   mh('nexttrack', function () { sig(false); });
   mh('previoustrack', ant);
-  mh('seekforward', function (d) { salto((d && d.seekOffset) || 10); });
-  mh('seekbackward', function (d) { salto(-((d && d.seekOffset) || 10)); });
   mh('seekto', function (d) { if (isFinite(audio.duration)) audio.currentTime = d.seekTime; });
+
+  // En iPhone los controles de la pantalla bloqueada tienen solo dos ranuras
+  // laterales: si se declaran los saltos de 10 s, iOS los pone ahi y esconde
+  // los botones de cancion anterior y siguiente. Por eso en iPhone no se
+  // declaran: asi salen los de cambiar de cancion, que es lo util fuera de la app.
+  // (Para tener los de 10 s en su lugar, borra la condicion de abajo.)
+  var esIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+              (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  if (!esIOS) {
+    mh('seekforward', function (d) { salto((d && d.seekOffset) || 10); });
+    mh('seekbackward', function (d) { salto(-((d && d.seekOffset) || 10)); });
+  }
 }
 
 /* ================= instalacion ================= */
