@@ -20,7 +20,8 @@ var audio = $('au');
 var clave = '', carpeta = '';
 var cn = [], or = [], pos = -1, fc = '', alea = false, rep = 'no';
 var vis = [], dib = 0, PAG = 150, arrastre = false, pendiente = 0, deberia = false;
-var tags = {}, instalador = null, playToken = 0;
+var tags = {}, instalador = null, playToken = 0, audioObjectUrl = '';
+var cargaAudioToken = 0;
 
 /* ================= utilidades ================= */
 function fmt(s) {
@@ -391,19 +392,50 @@ function buscarTags(s) {
 }
 
 /* ================= reproduccion ================= */
+function liberarAudioBlob() {
+  if (audioObjectUrl) {
+    try { URL.revokeObjectURL(audioObjectUrl); } catch (e) {}
+    audioObjectUrl = '';
+  }
+}
+
+function obtenerAudio(s, token) {
+  var u = urlAudio(s);
+  return fetch(u, { cache: 'no-store' }).then(function (r) {
+    var ct = (r.headers.get('Content-Type') || '').toLowerCase();
+    if (!r.ok) {
+      return r.text().then(function (txt) {
+        var msg = '';
+        try { var j = JSON.parse(txt); msg = j.error && j.error.message || ''; } catch (e) {}
+        throw new Error('Google Drive respondió HTTP ' + r.status + (msg ? ': ' + msg : ''));
+      });
+    }
+    return r.blob().then(function (blob) {
+      // Si Drive devolvió JSON/HTML, no se trata de un archivo de audio.
+      if (ct && ct.indexOf('audio/') !== 0 && ct.indexOf('application/octet-stream') !== 0 && blob.type && blob.type.indexOf('audio/') !== 0) {
+        throw new Error('Drive devolvió ' + ct + ' en lugar de audio. Revisa permisos de descarga.');
+      }
+      if (token !== cargaAudioToken) throw new Error('Carga cancelada');
+      return blob;
+    });
+  });
+}
+
 function tocar(p) {
   if (p < 0 || p >= or.length) return;
   pos = p;
   var s = act();
   $('ti').textContent = titulo(s);
-  est('Cargando…');
+  est('Cargando audio…');
   marcar();
   guardarSesion();
   pendiente = 0;
 
-  // Esta es la ruta que usaba el reproductor original y es la más fiable
-  // para Drive API: establecer src, cargar y después iniciar reproducción.
-  audio.src = urlAudio(s);
+  var token = ++playToken;
+  var fetchToken = ++cargaAudioToken;
+  liberarAudioBlob();
+  audio.pause();
+  audio.removeAttribute('src');
   audio.load();
   mediaInfo(s);
   actualizarFavoritosUI();
@@ -411,18 +443,21 @@ function tocar(p) {
   buscarTags(s);
   if (pos + 1 < or.length) buscarTags(cn[or[pos + 1]]);
 
-  var token = ++playToken;
-  var pr = audio.play();
-  if (pr && pr.catch) pr.catch(function (e) {
-    if (token !== playToken || act() !== s) return;
-    if (e && e.name === 'NotAllowedError') {
-      est('Toca ▶ para reproducir');
-    } else if (e && e.name === 'AbortError') {
-      // Un cambio rápido de pista puede abortar una reproducción pendiente.
-      return;
-    } else {
-      est('No se pudo reproducir: ' + (e && e.message ? e.message : e));
-    }
+  obtenerAudio(s, fetchToken).then(function (blob) {
+    if (token !== playToken || fetchToken !== cargaAudioToken || act() !== s) return;
+    audioObjectUrl = URL.createObjectURL(blob);
+    audio.src = audioObjectUrl;
+    audio.load();
+    var pr = audio.play();
+    if (pr && pr.catch) pr.catch(function (e) {
+      if (token !== playToken || act() !== s) return;
+      if (e && e.name === 'NotAllowedError') est('Toca ▶ para reproducir');
+      else if (e && e.name !== 'AbortError') est('No se pudo reproducir: ' + (e.message || e));
+    });
+  })['catch'](function (e) {
+    if (token !== playToken || fetchToken !== cargaAudioToken || act() !== s) return;
+    if (e && e.message === 'Carga cancelada') return;
+    est('No se pudo reproducir: ' + (e && e.message ? e.message : e));
   });
 }
 function sig(auto) {
@@ -665,7 +700,7 @@ audio.addEventListener('error', function () {
     'Google Drive no entregó una fuente de audio válida.';
   est('No se pudo reproducir: ' + detalle);
 });;
-window.addEventListener('beforeunload', guardarSesion);
+window.addEventListener('beforeunload', function () { liberarAudioBlob(); guardarSesion(); });
 document.addEventListener('visibilitychange', function () {
   // No forzar play() al volver a la pestaña: algunos navegadores consideran
   // esa llamada una nueva reproducción y puede competir con una transición.
