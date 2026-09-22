@@ -542,6 +542,11 @@ $('fc').addEventListener('change', function (e) {
 });
 $('br').onclick = function () { cargarBiblioteca(true); };
 $('bc').onclick = abrirInicio;
+// El botón que aparece cuando la carpeta falla también debe abrir la configuración.
+document.addEventListener('click', function (e) {
+  var b = e.target.closest ? e.target.closest('#bo') : null;
+  if (b) { e.preventDefault(); abrirInicio(); }
+});
 $('bfav').onclick = mostrarFavoritos;
 $('mfav').onclick = function(){var a=act();if(a)alternarFavorito(a.id);};
 $('expand').onclick = abrirFull;
