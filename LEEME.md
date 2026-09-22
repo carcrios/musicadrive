@@ -13,3 +13,11 @@ La reproducción no hace consultas ID3 al iniciar una canción ni precarga metad
 Haz una recarga fuerte (`Ctrl + Shift + R`). Si el navegador conserva la versión anterior, usa **F12 → Application → Storage → Clear site data**.
 
 No cambies `app.js` mientras se prueba esta versión. Primero validemos la reproducción de varias canciones; las mejoras visuales se deben hacer después y de forma aislada.
+
+
+## Y2K MP3/CD
+La pantalla de reproducción completa incluye una interfaz visual estilo reproductor MP3/CD de principios de los 2000. Los cambios son visuales y no modifican el motor de reproducción de audio.
+
+
+### Diseño
+La interfaz Y2K está optimizada para móvil y escritorio; el reproductor completo usa una distribución horizontal en PC y vertical en pantallas pequeñas.
