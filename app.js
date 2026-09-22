@@ -12,7 +12,7 @@ var API = window.DRIVE_API || 'https://www.googleapis.com/drive/v3';
 var CARPETA_MIME = 'application/vnd.google-apps.folder';
 var EXT = /\.(mp3|m4a|aac|ogg|oga|opus|wav|flac|webm)$/i;
 
-var LL = { clave: 'mus_clave', carpeta: 'mus_carpeta', lista: 'mus_lista',
+var LL = { clave: 'mus_clave', carpeta: 'mus_carpeta', lista: 'mus_lista_v3',
            sesion: 'mus_sesion', tags: 'mus_tags', fav: 'mus_favoritos' };
 var favoritos = leer(LL.fav, {});
 
@@ -95,14 +95,23 @@ function drive(ruta) {
 function urlHijos(id, pageToken) {
   var q = "'" + id + "' in parents and trashed=false";
   var u = '/files?q=' + encodeURIComponent(q) +
-    '&fields=' + encodeURIComponent('nextPageToken,files(id,name,mimeType,size)') +
+    '&fields=' + encodeURIComponent('nextPageToken,files(id,name,mimeType,size,webContentLink,resourceKey)') +
     '&pageSize=1000&orderBy=name&supportsAllDrives=true&includeItemsFromAllDrives=true';
   if (pageToken) u += '&pageToken=' + encodeURIComponent(pageToken);
   return u;
 }
 
-/** El enlace directo del audio: el navegador lo reproduce sin intermediarios. */
+/**
+ * URL de reproducción.
+ *
+ * Drive puede proteger archivos compartidos mediante una resource key.
+ * El <audio> no permite que nosotros añadamos el encabezado
+ * X-Goog-Drive-Resource-Keys, por lo que preferimos webContentLink,
+ * que Drive ya devuelve con la información necesaria para el enlace.
+ * Como respaldo usamos files.get?alt=media.
+ */
 function urlAudio(s) {
+  if (s && s.w) return s.w;
   return API + '/files/' + encodeURIComponent(s.id) + '?alt=media&supportsAllDrives=true&key=' +
     encodeURIComponent(clave);
 }
@@ -127,7 +136,9 @@ function escanear(raiz, avanzar) {
             pistas.push({
               id: f.id, n: f.name.replace(/\.[^.]+$/, ''), c: n.ruta || '',
               m: String(f.mimeType || '').indexOf('audio/') === 0 ? f.mimeType : 'audio/mpeg',
-              z: Number(f.size || 0)
+              z: Number(f.size || 0),
+              w: f.webContentLink || '',
+              rk: f.resourceKey || ''
             });
           }
         });
@@ -640,10 +651,23 @@ audio.addEventListener('error', function () {
   if (!audio.src) return;
   var mediaError = audio.error;
   var code = mediaError ? mediaError.code : 0;
-  // No cambiar de pista automáticamente: hacerlo mientras play() está pendiente
-  // puede producir "The play() request was interrupted by a call to pause()".
+  var s = act();
+  // Si webContentLink no sirve para streaming en ese archivo, probamos una
+  // sola vez con files.get?alt=media antes de mostrar el error definitivo.
+  if (s && s.w && !s._fallback) {
+    s._fallback = true;
+    var fallback = API + '/files/' + encodeURIComponent(s.id) + '?alt=media&supportsAllDrives=true&key=' + encodeURIComponent(clave);
+    audio.src = fallback;
+    var p = audio.play();
+    if (p && p['catch']) p['catch'](function () {});
+    return;
+  }
   if (code === 1) return;
-  est('No se pudo reproducir esta canción. Comprueba que el archivo de Drive siga disponible y tenga permiso de lectura.');
+  var detalle = code === 2 ? 'No se pudo descargar el archivo desde Google Drive.' :
+    code === 3 ? 'El formato o la respuesta de Google Drive no es reproducible por este navegador.' :
+    code === 4 ? 'El navegador no encontró una fuente compatible.' :
+    'Google Drive no entregó una fuente de audio válida.';
+  est('No se pudo reproducir: ' + detalle);
 });
 window.addEventListener('beforeunload', guardarSesion);
 document.addEventListener('visibilitychange', function () {
