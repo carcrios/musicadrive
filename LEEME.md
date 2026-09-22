@@ -17,7 +17,3 @@ No cambies `app.js` mientras se prueba esta versión. Primero validemos la repro
 
 ## Y2K MP3/CD
 La pantalla de reproducción completa incluye una interfaz visual estilo reproductor MP3/CD de principios de los 2000. Los cambios son visuales y no modifican el motor de reproducción de audio.
-
-
-### Diseño
-La interfaz Y2K está optimizada para móvil y escritorio; el reproductor completo usa una distribución horizontal en PC y vertical en pantallas pequeñas.
