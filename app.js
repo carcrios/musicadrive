@@ -111,7 +111,11 @@ function urlHijos(id, pageToken) {
  * Como respaldo usamos files.get?alt=media.
  */
 function urlAudio(s) {
-  if (s && s.w) return s.w;
+  // Para el elemento <audio> usamos directamente Drive API alt=media.
+  // webContentLink está pensado como enlace de descarga del navegador y
+  // puede devolver una respuesta que el elemento <audio> no acepta como
+  // fuente multimedia. Drive documenta files.get?alt=media para obtener
+  // el contenido binario del archivo.
   return API + '/files/' + encodeURIComponent(s.id) + '?alt=media&supportsAllDrives=true&key=' +
     encodeURIComponent(clave);
 }
@@ -397,10 +401,10 @@ function tocar(p) {
   guardarSesion();
   pendiente = 0;
 
-  // Cambiamos la fuente una sola vez. No hacemos load() ni pause() aquí.
-  // Esperamos canplay/loadedmetadata antes de llamar a play(), evitando
-  // carreras entre canciones y el error "play() interrupted by pause()".
+  // Esta es la ruta que usaba el reproductor original y es la más fiable
+  // para Drive API: establecer src, cargar y después iniciar reproducción.
   audio.src = urlAudio(s);
+  audio.load();
   mediaInfo(s);
   actualizarFavoritosUI();
   actualizarFull();
@@ -408,22 +412,19 @@ function tocar(p) {
   if (pos + 1 < or.length) buscarTags(cn[or[pos + 1]]);
 
   var token = ++playToken;
-  var iniciar = function () {
+  var pr = audio.play();
+  if (pr && pr.catch) pr.catch(function (e) {
     if (token !== playToken || act() !== s) return;
-    audio.removeEventListener('canplay', iniciar);
-    var pr = audio.play();
-    if (pr && pr.catch) pr.catch(function (e) {
-      if (token !== playToken || act() !== s) return;
-      if (e && e.name === 'NotAllowedError') { est('Toca ▶ para reproducir'); return; }
-      if (e && e.name === 'AbortError') return;
+    if (e && e.name === 'NotAllowedError') {
+      est('Toca ▶ para reproducir');
+    } else if (e && e.name === 'AbortError') {
+      // Un cambio rápido de pista puede abortar una reproducción pendiente.
+      return;
+    } else {
       est('No se pudo reproducir: ' + (e && e.message ? e.message : e));
-    });
-  };
-  audio.addEventListener('canplay', iniciar);
-  // Fallback para navegadores que no disparen canplay después de una carga ya lista.
-  if (audio.readyState >= 3) iniciar();
+    }
+  });
 }
-
 function sig(auto) {
   if (!or.length) return;
   if (auto && rep === 'una') { audio.currentTime = 0; audio.play(); return; }
@@ -657,31 +658,13 @@ audio.addEventListener('error', function () {
   if (!audio.src) return;
   var mediaError = audio.error;
   var code = mediaError ? mediaError.code : 0;
-  var s = act();
-  // Si webContentLink no sirve para streaming en ese archivo, probamos una
-  // sola vez con files.get?alt=media antes de mostrar el error definitivo.
-  if (s && s.w && !s._fallback) {
-    s._fallback = true;
-    var fallback = API + '/files/' + encodeURIComponent(s.id) + '?alt=media&supportsAllDrives=true&key=' + encodeURIComponent(clave);
-    audio.src = fallback;
-    var token = ++playToken;
-    var iniciarFallback = function () {
-      if (token !== playToken || act() !== s) return;
-      audio.removeEventListener('canplay', iniciarFallback);
-      var p = audio.play();
-      if (p && p.catch) p.catch(function () {});
-    };
-    audio.addEventListener('canplay', iniciarFallback);
-    if (audio.readyState >= 3) iniciarFallback();
-    return;
-  }
   if (code === 1) return;
-  var detalle = code === 2 ? 'No se pudo descargar el archivo desde Google Drive.' :
-    code === 3 ? 'El formato o la respuesta de Google Drive no es reproducible por este navegador.' :
-    code === 4 ? 'El navegador no encontró una fuente compatible.' :
+  var detalle = code === 2 ? 'Google Drive no pudo entregar el archivo.' :
+    code === 3 ? 'El archivo se recibió, pero el navegador no pudo decodificarlo.' :
+    code === 4 ? 'Google Drive no entregó una fuente de audio compatible.' :
     'Google Drive no entregó una fuente de audio válida.';
   est('No se pudo reproducir: ' + detalle);
-});
+});;
 window.addEventListener('beforeunload', guardarSesion);
 document.addEventListener('visibilitychange', function () {
   // No forzar play() al volver a la pestaña: algunos navegadores consideran
