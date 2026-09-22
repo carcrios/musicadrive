@@ -1,4 +1,4 @@
-# Mi Música 2.6.4 Y2K Reference Player — versión estable
+# Mi Música 2.6.4 — versión estable
 
 Esta versión congela el funcionamiento de reproducción y evita cambios experimentales.
 
