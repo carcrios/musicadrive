@@ -15,5 +15,5 @@ Haz una recarga fuerte (`Ctrl + Shift + R`). Si el navegador conserva la versió
 No cambies `app.js` mientras se prueba esta versión. Primero validemos la reproducción de varias canciones; las mejoras visuales se deben hacer después y de forma aislada.
 
 
-### v2.6.4.2 Mobile Fix
-Se actualizó el Service Worker para usar una nueva versión de caché y para priorizar la red en HTML/JS/CSS. Esto evita que una PWA instalada en iPhone continúe ejecutando una versión antigua del reproductor después de una actualización. El motor de reproducción no fue modificado.
+## v2.6.4.3
+Actualiza la caché de la biblioteca para volver a consultar los metadatos de Drive (`webContentLink`/`resourceKey`) y declara la sesión de audio como `playback` cuando el navegador lo permite. La reproducción existente no fue reescrita.

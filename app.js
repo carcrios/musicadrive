@@ -12,11 +12,12 @@ var API = window.DRIVE_API || 'https://www.googleapis.com/drive/v3';
 var CARPETA_MIME = 'application/vnd.google-apps.folder';
 var EXT = /\.(mp3|m4a|aac|ogg|oga|opus|wav|flac|webm)$/i;
 
-var LL = { clave: 'mus_clave', carpeta: 'mus_carpeta', lista: 'mus_lista_v4',
+var LL = { clave: 'mus_clave', carpeta: 'mus_carpeta', lista: 'mus_lista_v5',
            sesion: 'mus_sesion', tags: 'mus_tags', fav: 'mus_favoritos' };
 var favoritos = leer(LL.fav, {});
 
 var audio = $('au');
+try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) {}
 var clave = '', carpeta = '';
 var cn = [], or = [], pos = -1, fc = '', alea = false, rep = 'no';
 var vis = [], dib = 0, PAG = 150, arrastre = false, pendiente = 0, deberia = false;
