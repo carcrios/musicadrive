@@ -385,15 +385,24 @@ function tocar(p) {
   marcar();
   guardarSesion();
 
+  // Cambiar la fuente y dejar que el navegador inicie la carga.
+  // Llamar a load() justo antes de play() puede provocar AbortError/"play() interrupted"
+  // en algunos navegadores cuando Google Drive responde con redirecciones.
   audio.src = urlAudio(s);
-  audio.load();
   mediaInfo(s);
   actualizarFavoritosUI();
   actualizarFull();
+  // Esperamos a que el elemento haya recibido la nueva fuente antes de reproducir.
+  // No llamamos a pause()/load() durante esta transición.
   var pr = audio.play();
   if (pr && pr['catch']) pr['catch'](function (e) {
-    if (e && e.name === 'NotAllowedError') est('Toca ▶ para reproducir');
-    else est('No se pudo reproducir: ' + (e.message || e));
+    // AbortError suele significar que la fuente cambió antes de completar play().
+    // No es un error de la canción y no debemos avanzar de pista.
+    if (e && (e.name === 'AbortError' || e.name === 'NotAllowedError')) {
+      if (e.name === 'NotAllowedError') est('Toca ▶ para reproducir');
+      return;
+    }
+    est('No se pudo reproducir: ' + (e && e.message ? e.message : e));
   });
   buscarTags(s);
   if (pos + 1 < or.length) buscarTags(cn[or[pos + 1]]);
@@ -629,15 +638,17 @@ audio.addEventListener('pause', function () {
 });
 audio.addEventListener('error', function () {
   if (!audio.src) return;
-  est('No se pudo leer esa canción. Pasando a la siguiente…');
-  setTimeout(function () { sig(true); }, 1500);
+  var mediaError = audio.error;
+  var code = mediaError ? mediaError.code : 0;
+  // No cambiar de pista automáticamente: hacerlo mientras play() está pendiente
+  // puede producir "The play() request was interrupted by a call to pause()".
+  if (code === 1) return;
+  est('No se pudo reproducir esta canción. Comprueba que el archivo de Drive siga disponible y tenga permiso de lectura.');
 });
 window.addEventListener('beforeunload', guardarSesion);
 document.addEventListener('visibilitychange', function () {
-  if (!document.hidden && deberia && audio.paused && audio.src) {
-    var p = audio.play();
-    if (p && p['catch']) p['catch'](function () {});
-  }
+  // No forzar play() al volver a la pestaña: algunos navegadores consideran
+  // esa llamada una nueva reproducción y puede competir con una transición.
 });
 document.addEventListener('keydown', function (e) {
   if (e.key === 'Escape' && $('playerFull').style.display === 'flex') { cerrarFull(); return; }
