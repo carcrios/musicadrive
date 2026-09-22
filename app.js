@@ -7,7 +7,7 @@
    ========================================================= */
 'use strict';
 
-window.APP_VER = '4';   // debe coincidir con HTML_VER en index.html
+window.APP_VER = '5';   // debe coincidir con HTML_VER en index.html
 
 var $ = function (i) { return document.getElementById(i); };
 var API = window.DRIVE_API || 'https://www.googleapis.com/drive/v3';
@@ -484,6 +484,72 @@ function guardarSesion() {
   });
 }
 
+/* ================= prueba de una cancion =================
+   Pregunta a Google por el archivo y ademas intenta abrirlo con un
+   reproductor aparte. Muestra todo lo que contesta, sin interpretar. */
+function probarCancion() {
+  var s = act() || cn[0];
+  if (!s) { alert('Primero elige una canción.'); return; }
+
+  var L = [];
+  var url = urlAudio(s);
+  var urlOculta = url.replace(/key=[^&]*/, 'key=' + (clave ? clave.slice(0, 6) + '…' : 'VACIA'));
+
+  L.push('Cancion : ' + s.n);
+  L.push('Carpeta : ' + (s.c || '(raiz)'));
+  L.push('ID      : ' + s.id);
+  L.push('Tipo    : ' + s.m + '   Tamano: ' + (s.z ? (s.z / 1048576).toFixed(1) + ' MB' : 'desconocido'));
+  L.push('URL     : ' + urlOculta);
+  L.push('');
+
+  var pintar2 = function () { $('dgt').textContent = L.join('\n'); };
+  $('dgt').textContent = L.join('\n') + '\nProbando...';
+  $('dg').className = 'ver';
+
+  // no-store: que pregunte de verdad y no conteste desde la copia del navegador
+  fetch(url, { headers: { Range: 'bytes=0-1023' }, cache: 'no-store' }).then(function (r) {
+    L.push('--- Respuesta de Google ---');
+    L.push('HTTP          : ' + r.status + ' ' + (r.statusText || ''));
+    L.push('Content-Type  : ' + (r.headers.get('content-type') || '(ninguno)'));
+    L.push('Content-Range : ' + (r.headers.get('content-range') || '(ninguno)'));
+    L.push('Accept-Ranges : ' + (r.headers.get('accept-ranges') || '(ninguno)'));
+    return r.clone().arrayBuffer().then(function (b) {
+      L.push('Bytes         : ' + b.byteLength);
+      var v = new Uint8Array(b), hex = [];
+      for (var i = 0; i < Math.min(4, v.length); i++) hex.push(v[i].toString(16));
+      L.push('Primeros bytes: ' + hex.join(' ') +
+        (v[0] === 0x49 && v[1] === 0x44 && v[2] === 0x33 ? '   (ID3: es un MP3)'
+         : (v[0] === 0xff ? '   (trama MP3)' : '   (no parece audio)')));
+      if (!r.ok) {
+        return r.clone().text().then(function (t) { L.push('Cuerpo        : ' + t.slice(0, 400)); });
+      }
+    });
+  })['catch'](function (e) {
+    L.push('--- Respuesta de Google ---');
+    L.push('LA PETICION FALLO: ' + (e.message || e));
+    L.push('(suele ser CORS, sin internet, o la clave bloqueada)');
+  }).then(function () {
+    L.push('');
+    L.push('--- Prueba del reproductor ---');
+    pintar2();
+    var a = new Audio(), fin = false;
+    var cerrar = function (t) { if (fin) return; fin = true; L.push(t); pintar2(); };
+    a.addEventListener('loadedmetadata', function () {
+      cerrar('OK: metadatos leidos, duracion ' +
+        (isFinite(a.duration) ? a.duration.toFixed(1) + ' s' : 'desconocida'));
+    });
+    a.addEventListener('error', function () {
+      var c = a.error ? a.error.code : 0;
+      var nom = { 1: 'cancelado', 2: 'error de red', 3: 'no se pudo decodificar',
+                  4: 'formato no soportado o no accesible' }[c] || 'desconocido';
+      cerrar('ERROR ' + c + ': ' + nom + (a.error && a.error.message ? '  [' + a.error.message + ']' : ''));
+    });
+    setTimeout(function () { cerrar('SIN RESPUESTA en 12 segundos.'); }, 12000);
+    a.src = url + '&_=' + Date.now();   // evita la copia guardada del navegador
+    a.load();
+  });
+}
+
 /* ================= pantalla de inicio ================= */
 function abrirInicio() {
   $('ini').className = 'ver';
@@ -542,6 +608,15 @@ $('fc').addEventListener('change', function (e) {
 });
 $('br').onclick = function () { cargarBiblioteca(true); };
 $('bc').onclick = abrirInicio;
+$('bd').onclick = probarCancion;
+$('dgx').onclick = function () { $('dg').className = ''; };
+$('dgc').onclick = function () {
+  var t = $('dgt').textContent;
+  if (navigator.clipboard) navigator.clipboard.writeText(t).then(
+    function () { $('dgc').textContent = '¡Copiado!'; setTimeout(function () { $('dgc').textContent = 'Copiar'; }, 1500); },
+    function () { prompt('Copia esto:', t); });
+  else prompt('Copia esto:', t);
+};
 
 $('pl').onclick = function () {
   if (!or.length) return;

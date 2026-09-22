@@ -97,6 +97,13 @@ input[type=range]{flex:1 1 auto;width:100%;accent-color:var(--ac);height:22px;mi
 .vo input{flex:none;width:130px}.vo svg{width:18px;height:18px;fill:currentColor}
 #au{display:none}
 #av{background:#b0202a;color:#fff;padding:13px 16px;font-size:14px;line-height:1.5;display:none}
+#dg{position:fixed;inset:auto 0 0 0;max-height:70vh;background:#0a0c10;border-top:2px solid var(--ac);
+    z-index:90;display:none;flex-direction:column}
+#dg.ver{display:flex}
+#dg .top{display:flex;gap:8px;align-items:center;padding:9px 12px;border-bottom:1px solid var(--li)}
+#dg .top b{flex:1;font-size:13px;color:var(--gr)}
+#dg pre{margin:0;overflow:auto;flex:1;padding:10px 12px 16px;font-family:ui-monospace,Menlo,Consolas,monospace;
+        font-size:11.5px;line-height:1.6;white-space:pre-wrap;word-break:break-word;color:#b9c0cc}
 /* ---------- ajustes para telefono ---------- */
 @media (max-width: 480px) {
   header{padding:10px 12px;gap:6px;flex-wrap:nowrap}
@@ -123,7 +130,7 @@ input[type=range]{flex:1 1 auto;width:100%;accent-color:var(--ac);height:22px;mi
 
 <script>
 // Version de ESTE archivo. app.js declara la suya; si no coinciden, se avisa.
-var HTML_VER = '4';
+var HTML_VER = '5';
 var yaHuboError = false;
 
 function avisar(t) {
@@ -150,7 +157,7 @@ setTimeout(function () {
   var viva = !!document.querySelector('.pi') ||
              (ini && ini.className.indexOf('ver') >= 0);
 
-  var suya = window.APP_VER ? ('la v' + window.APP_VER) : 'una anterior a la v4';
+  var suya = window.APP_VER ? ('la v' + window.APP_VER) : 'una anterior a la v5';
 
   if (viva) {
     avisar('<b>app.js esta desactualizado.</b><br>La app funciona, pero index.html es la v' +
@@ -196,11 +203,12 @@ setTimeout(function () {
 
 <!-- ================= app ================= -->
 <header>
-  <h1>🎵 Mi Música <span class="se">v4</span></h1>
+  <h1>🎵 Mi Música <span class="se">v5</span></h1>
   <span id="ct"></span>
   <button class="bt oculto" id="bi">⬇ Instalar</button>
   <button class="bt" id="bc">📁<span class="txt"> Cambiar</span></button>
   <button class="bt" id="br" title="Volver a leer la carpeta">↻</button>
+  <button class="bt" id="bd" title="Probar esta canción">🔎</button>
 </header>
 
 <div class="fi">
@@ -233,6 +241,15 @@ setTimeout(function () {
     <input id="vo" type="range" min="0" max="100" value="90" aria-label="Volumen">
   </div>
 </footer>
+
+<div id="dg">
+  <div class="top">
+    <b>Prueba de la canción</b>
+    <button class="bt" id="dgc">Copiar</button>
+    <button class="bt" id="dgx">Cerrar</button>
+  </div>
+  <pre id="dgt"></pre>
+</div>
 
 <script src="config.js"></script>
 <script src="app.js"></script>
