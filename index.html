@@ -53,6 +53,7 @@ header h1{font-size:17px;margin:0;white-space:nowrap}
     font-size:13px;cursor:pointer;white-space:nowrap}
 .bt:hover{border-color:var(--ac);color:var(--ac)}
 .bt.oculto{display:none}
+.se{background:var(--ac);color:#08130b;font-size:10px;font-weight:700;padding:2px 6px;border-radius:5px;vertical-align:middle}
 
 /* ---------- filtros ---------- */
 .fi{padding:10px 16px;border-bottom:1px solid var(--li);display:flex;gap:10px;flex-wrap:wrap;flex:0 0 auto}
@@ -120,6 +121,27 @@ input[type=range]{flex:1 1 auto;width:100%;accent-color:var(--ac);height:22px;mi
 
 <div id="av"></div>
 
+<script>
+// Si el JavaScript falla, se ve en pantalla en vez de quedarse todo mudo.
+window.onerror = function (m, f, l) {
+  var a = document.getElementById('av');
+  if (!a) return false;
+  a.style.display = 'block';
+  a.innerHTML = '<b>Error de JavaScript</b><br>' + m +
+    '<br><small>' + String(f || '').split('/').pop() + ' linea ' + l + '</small>';
+  return false;
+};
+setTimeout(function () {
+  if (!window.__LISTO) {
+    var a = document.getElementById('av');
+    if (!a) return;
+    a.style.display = 'block';
+    a.innerHTML = '<b>La app no arranco.</b><br>Falta un archivo o quedo incompleto. ' +
+      'Revisa que en GitHub esten los 8 archivos, y recarga manteniendo pulsado el boton de recargar.';
+  }
+}, 4000);
+</script>
+
 <!-- ================= pantalla de inicio ================= -->
 <div id="ini">
   <div class="caja">
@@ -151,7 +173,7 @@ input[type=range]{flex:1 1 auto;width:100%;accent-color:var(--ac);height:22px;mi
 
 <!-- ================= app ================= -->
 <header>
-  <h1>🎵 Mi Música</h1>
+  <h1>🎵 Mi Música <span class="se">v2</span></h1>
   <span id="ct"></span>
   <button class="bt oculto" id="bi">⬇ Instalar</button>
   <button class="bt" id="bc">📁<span class="txt"> Cambiar</span></button>

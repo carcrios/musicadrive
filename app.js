@@ -622,6 +622,29 @@ $('bi').onclick = function () {
 };
 window.addEventListener('appinstalled', function () { $('bi').className = 'bt oculto'; });
 
+/* ================= reinicio de emergencia ================= */
+/* Abrir la app con  ?reset=1  al final de la direccion borra la copia
+   guardada y el service worker, y vuelve a empezar de cero.
+   Sirve cuando una actualizacion se queda a medias. */
+if (location.search.indexOf('reset=1') >= 0) {
+  document.getElementById('ls').innerHTML = '<div class="va">Limpiando…</div>';
+  var tareas = [];
+  try { localStorage.clear(); } catch (e) {}
+  if (window.caches && caches.keys) {
+    tareas.push(caches.keys().then(function (k) {
+      return Promise.all(k.map(function (n) { return caches.delete(n); }));
+    }));
+  }
+  if (navigator.serviceWorker && navigator.serviceWorker.getRegistrations) {
+    tareas.push(navigator.serviceWorker.getRegistrations().then(function (rs) {
+      return Promise.all(rs.map(function (r) { return r.unregister(); }));
+    }));
+  }
+  Promise.all(tareas)['catch'](function () {}).then(function () {
+    location.replace(location.pathname);
+  });
+} else
+
 /* ================= arranque ================= */
 (function () {
   if (navigator.serviceWorker) navigator.serviceWorker.register('sw.js')['catch'](function () {});
@@ -633,3 +656,5 @@ window.addEventListener('appinstalled', function () { $('bi').className = 'bt oc
   if (clave && carpeta) cargarBiblioteca(false);
   else abrirInicio();
 })();
+
+window.__LISTO = true;   // lo lee el guardia de index.html
