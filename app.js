@@ -22,7 +22,6 @@ var cn = [], or = [], pos = -1, fc = '', alea = false, rep = 'no';
 var vis = [], dib = 0, PAG = 150, arrastre = false, pendiente = 0, deberia = false;
 var tags = {}, instalador = null, playToken = 0, audioObjectUrl = '';
 var cargaAudioToken = 0;
-var SALTO_BLOQUEO = 10; // segundos usados por los controles de avance/retroceso de la pantalla bloqueada
 
 /* ================= utilidades ================= */
 function fmt(s) {
@@ -564,81 +563,31 @@ function ant() {
   tocar(pos - 1);
 }
 function salto(g) {
-  if (isFinite(audio.duration) && audio.duration > 0) {
-    audio.currentTime = Math.max(0, Math.min(Math.max(0, audio.duration - 0.05), audio.currentTime + g));
-    posicion();
-    actualizarFull();
+  if (isFinite(audio.duration)) {
+    audio.currentTime = Math.max(0, Math.min(audio.duration - 0.25, audio.currentTime + g));
   }
 }
 function mediaInfo(s) {
   if (!('mediaSession' in navigator)) return;
-  activarMediaHandlers();
   var g = tags[s.id] || {};
   try {
     navigator.mediaSession.metadata = new MediaMetadata({
       title: g.t || s.n, artist: g.a || 'Google Drive', album: g.b || s.c || 'Mi Música',
-      artwork: [
-        { src: 'icon-192.png', sizes: '192x192', type: 'image/png' },
-        { src: 'icon-512.png', sizes: '512x512', type: 'image/png' }
-      ]
+      artwork: [{ src: 'icon-512.png', sizes: '512x512', type: 'image/png' }]
     });
   } catch (e) {}
   posicion();
 }
 function posicion() {
   if (!('mediaSession' in navigator) || !navigator.mediaSession.setPositionState) return;
-  var dur = Number(audio.duration);
-  var cur = Number(audio.currentTime) || 0;
-  var rate = Number(audio.playbackRate) || 1;
-  if (!isFinite(dur) || dur <= 0 || !isFinite(cur) || rate <= 0) return;
-  cur = Math.max(0, Math.min(cur, dur));
+  if (!isFinite(audio.duration) || audio.duration <= 0) return;
   try {
     navigator.mediaSession.setPositionState({
-      duration: dur,
-      position: cur,
-      playbackRate: rate
+      duration: audio.duration,
+      position: Math.min(audio.currentTime || 0, audio.duration),
+      playbackRate: audio.playbackRate || 1
     });
   } catch (e) {}
-}
-
-function activarMediaHandlers() {
-  if (!('mediaSession' in navigator)) return;
-  var mh = function (a, f) { try { navigator.mediaSession.setActionHandler(a, f); return true; } catch (e) { return false; } };
-  mh('play', function () {
-    deberia = true;
-    var p = audio.play();
-    if (p && p.catch) p.catch(function () {});
-  });
-  mh('pause', function () { deberia = false; audio.pause(); });
-  mh('nexttrack', function () { sig(false); });
-  mh('previoustrack', ant);
-
-  // Estos dos manejadores son los que permiten que los controles del sistema
-  // puedan mostrar/usar avance y retroceso cuando el navegador los expone
-  // en la pantalla bloqueada, AirPods, Centro de control u otros controles.
-  mh('seekbackward', function (d) {
-    var segundos = Number(d && d.seekOffset);
-    if (!isFinite(segundos) || segundos <= 0) segundos = SALTO_BLOQUEO;
-    salto(-segundos);
-  });
-  mh('seekforward', function (d) {
-    var segundos = Number(d && d.seekOffset);
-    if (!isFinite(segundos) || segundos <= 0) segundos = SALTO_BLOQUEO;
-    salto(segundos);
-  });
-  mh('seekto', function (d) {
-    if (!isFinite(audio.duration) || !d || !isFinite(d.seekTime)) return;
-    var destino = Math.max(0, Math.min(audio.duration, d.seekTime));
-    try {
-      if (d.fastSeek && typeof audio.fastSeek === 'function') audio.fastSeek(destino);
-      else audio.currentTime = destino;
-    } catch (e) {
-      try { audio.currentTime = destino; } catch (x) {}
-    }
-    posicion();
-    actualizarFull();
-  });
-  mh('stop', function () { deberia = false; audio.pause(); });
 }
 function guardarSesion() {
   var a = act();
@@ -753,7 +702,7 @@ $('pfan').onclick = function(){ ant(); actualizarFull(); };
 $('pfsi').onclick = function(){ sig(false); actualizarFull(); };
 $('pfm10').onclick = function(){ salto(-10); actualizarFull(); };
 $('pfd10').onclick = function(){ salto(10); actualizarFull(); };
-$('pfpr').addEventListener('input',function(){if(isFinite(audio.duration))audio.currentTime=this.value/1000*audio.duration; posicion(); actualizarFull();});
+$('pfpr').addEventListener('input',function(){if(isFinite(audio.duration))audio.currentTime=this.value/1000*audio.duration; actualizarFull();});
 
 $('pl').onclick = function () {
   if (!or.length) return;
@@ -788,7 +737,6 @@ $('pr').addEventListener('input', function () {
 $('pr').addEventListener('change', function () {
   if (isFinite(audio.duration)) audio.currentTime = $('pr').value / 1000 * audio.duration;
   arrastre = false;
-  posicion();
 });
 
 var ultimo = 0;
@@ -801,12 +749,10 @@ audio.addEventListener('timeupdate', function () {
       audio.buffered.end(audio.buffered.length - 1) / audio.duration * 100) + '%';
   }
   actualizarFull();
-  posicion();
   var n = Date.now();
-  if (n - ultimo > 5000) { ultimo = n; guardarSesion(); }
+  if (n - ultimo > 5000) { ultimo = n; guardarSesion(); posicion(); }
 });
 audio.addEventListener('loadedmetadata', function () {
-  activarMediaHandlers();
   $('t2').textContent = fmt(audio.duration);
   if (pendiente > 0) { try { audio.currentTime = pendiente; } catch (e) {} pendiente = 0; }
   posicion();
@@ -815,7 +761,6 @@ audio.addEventListener('loadedmetadata', function () {
 audio.addEventListener('playing', function () { var a = act(); est(a ? (a.c || '') : ''); });
 audio.addEventListener('ended', function () { sig(true); });
 audio.addEventListener('play', function () {
-  activarMediaHandlers();
   deberia = true;
   $('i1').style.display = 'none'; $('i2').style.display = '';
   try { navigator.mediaSession.playbackState = 'playing'; } catch (e) {}
@@ -858,10 +803,14 @@ document.addEventListener('keydown', function (e) {
 });
 
 if ('mediaSession' in navigator) {
-  // Registramos cuanto antes y también se vuelve a intentar al comenzar
-  // una canción. Safari/iOS puede exponer un conjunto distinto de acciones
-  // según el tipo de control del sistema disponible.
-  activarMediaHandlers();
+  var mh = function (a, f) { try { navigator.mediaSession.setActionHandler(a, f); } catch (e) {} };
+  mh('play', function () { deberia = true; audio.play(); });
+  mh('pause', function () { deberia = false; audio.pause(); });
+  mh('nexttrack', function () { sig(false); });
+  mh('previoustrack', ant);
+  mh('seekforward', function (d) { salto((d && d.seekOffset) || 10); });
+  mh('seekbackward', function (d) { salto(-((d && d.seekOffset) || 10)); });
+  mh('seekto', function (d) { if (isFinite(audio.duration)) audio.currentTime = d.seekTime; });
 }
 
 /* ================= instalacion ================= */
