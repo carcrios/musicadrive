@@ -11,4 +11,3 @@ window.API_KEY = '';
 window.CARPETA = '';
 
 window.DRIVE_API = 'https://www.googleapis.com/drive/v3';
-

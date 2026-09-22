@@ -3,179 +3,37 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Mi Música</title>
-<meta name="theme-color" content="#0e1014">
+<title>Mi Música — Google Drive Player</title>
+<meta name="theme-color" content="#0b0d12">
+<meta name="color-scheme" content="dark">
+<meta name="description" content="Reproductor PWA para música almacenada en Google Drive.">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <style>
-:root{--bg:#0e1014;--pa:#171a21;--p2:#1e222b;--li:#252933;--tx:#e9ebef;--gr:#8a909b;--ac:#1ed760}
-*{box-sizing:border-box}
-html,body{height:100%;overscroll-behavior:none}
-body{height:100dvh}          /* en iPhone, 100% incluye la barra del navegador */
-body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);
-     color:var(--tx);display:flex;flex-direction:column;overflow:hidden;
-     padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
-input,select,button{font-family:inherit}
-
-/* ---------- pantalla de inicio ---------- */
-#ini{position:fixed;inset:0;background:var(--bg);z-index:100;display:none;overflow-y:auto}
-#ini.ver{display:block}
-.caja{max-width:440px;margin:0 auto;padding:40px 22px 60px;display:flex;flex-direction:column;gap:14px;align-items:center}
-.caja img{width:96px;height:96px}
-.caja h1{font-size:23px;margin:0}
-.caja .su{color:var(--gr);font-size:14px;margin:0;text-align:center;line-height:1.6}
-.campo{width:100%;background:var(--pa);border:1px solid var(--li);color:var(--tx);padding:13px 14px;
-       border-radius:11px;font-size:15px;outline:none}
-.campo:focus{border-color:var(--ac)}
-.eti{width:100%;font-size:13px;color:var(--gr);margin:6px 0 -6px}
-.pri{width:100%;background:var(--ac);color:#08130b;border:none;font-weight:700;font-size:16px;
-     padding:15px;border-radius:12px;cursor:pointer;margin-top:6px}
-.pri:hover{filter:brightness(1.08)}
-.pri:disabled{opacity:.5;cursor:default}
-details{width:100%;background:var(--pa);border:1px solid var(--li);border-radius:11px;padding:13px 15px;font-size:13.5px;color:var(--gr)}
-details summary{cursor:pointer;color:var(--tx);font-size:14px}
-details ol{margin:12px 0 0;padding-left:20px;line-height:1.85}
-details a{color:var(--ac)}
-details code{background:#0b0d11;padding:2px 5px;border-radius:4px;font-size:12px;word-break:break-all}
-.err{width:100%;background:#2a1416;border:1px solid #5a2a2e;color:#ff9a9a;padding:12px 14px;
-     border-radius:11px;font-size:13.5px;line-height:1.55;display:none}
-.err.ver{display:block}
-
-/* ---------- encabezado ---------- */
-header{padding:12px 16px;border-bottom:1px solid var(--li);display:flex;gap:8px;align-items:center;
-       flex-wrap:wrap;flex:0 0 auto}
-header h1{font-size:17px;margin:0;white-space:nowrap}
-#ct{color:var(--gr);font-size:12px;flex:1;white-space:nowrap}
-.bt{background:var(--p2);border:1px solid var(--li);color:var(--tx);padding:7px 11px;border-radius:9px;
-    font-size:13px;cursor:pointer;white-space:nowrap}
-.bt:hover{border-color:var(--ac);color:var(--ac)}
-.bt.oculto{display:none}
-.se{background:var(--ac);color:#08130b;font-size:10px;font-weight:700;padding:2px 6px;border-radius:5px;vertical-align:middle}
-
-/* ---------- filtros ---------- */
-.fi{padding:10px 16px;border-bottom:1px solid var(--li);display:flex;gap:10px;flex-wrap:wrap;flex:0 0 auto}
-select,input[type=search]{background:var(--pa);border:1px solid var(--li);color:var(--tx);padding:9px 12px;
-    border-radius:10px;font-size:14px;outline:none;flex:1 1 180px;min-width:0}
-select:focus,input[type=search]:focus{border-color:var(--ac)}
-
-/* ---------- lista ---------- */
-#ls{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:6px 8px 14px}
-.pi{display:flex;align-items:center;gap:12px;padding:10px;border-radius:10px;cursor:pointer}
-.pi:active{background:var(--pa)}
-@media(hover:hover){.pi:hover{background:var(--pa)}}
-.pi.ac{background:rgba(30,215,96,.12)}.pi.ac .nm{color:var(--ac)}
-.nu{width:34px;text-align:right;color:var(--gr);font-size:12px;flex:none;font-variant-numeric:tabular-nums}
-.in{min-width:0;flex:1}.nm,.sb{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.nm{font-size:14px}.sb{color:var(--gr);font-size:12px;margin-top:2px}
-.va{color:var(--gr);text-align:center;padding:34px 16px;font-size:14px;line-height:1.7}
-
-/* ---------- reproductor ---------- */
-footer{border-top:1px solid var(--li);background:var(--pa);padding:12px 16px 16px;flex:0 0 auto;
-       padding-bottom:calc(16px + env(safe-area-inset-bottom))}
-#ti{font-size:15px;font-weight:600;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#es{font-size:12px;color:var(--gr);text-align:center;min-height:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.ba{display:flex;align-items:center;gap:12px;font-size:12px;color:var(--gr);margin:10px auto 0;max-width:760px;
-    font-variant-numeric:tabular-nums}
-.ba .tm{width:46px;flex:none}.ba .tm.der{text-align:right}
-.ba .env{position:relative;flex:1 1 auto;display:flex;align-items:center;min-width:0}
-#bf{position:absolute;left:0;height:4px;background:#3a4150;border-radius:2px;pointer-events:none;top:50%;margin-top:-2px}
-input[type=range]{flex:1 1 auto;width:100%;accent-color:var(--ac);height:22px;min-width:0;background:transparent;margin:0}
-.co{display:flex;justify-content:center;align-items:center;gap:4px;margin-top:8px}
-.ico{background:none;border:none;color:var(--tx);cursor:pointer;padding:8px;border-radius:50%;
-     display:inline-flex;align-items:center;justify-content:center}
-@media(hover:hover){.ico:hover{background:var(--li)}}
-.ico svg{width:22px;height:22px;fill:currentColor}
-.sa{font-size:11px;font-weight:600;width:46px;height:42px;border-radius:10px;color:var(--gr)}
-.md{color:var(--gr);position:relative}.md.on{color:var(--ac)}
-.md .uno{position:absolute;font-size:9px;font-weight:700;top:5px;right:4px}
-#pl{background:var(--tx);color:#000;width:54px;height:54px;margin:0 8px}
-#pl svg{width:26px;height:26px}
-.vo{display:flex;align-items:center;gap:8px;justify-content:center;margin-top:8px;color:var(--gr)}
-.vo input{flex:none;width:130px}.vo svg{width:18px;height:18px;fill:currentColor}
-#au{display:none}
-#av{background:#b0202a;color:#fff;padding:13px 16px;font-size:14px;line-height:1.5;display:none}
-#dg{position:fixed;inset:auto 0 0 0;max-height:70vh;background:#0a0c10;border-top:2px solid var(--ac);
-    z-index:90;display:none;flex-direction:column}
-#dg.ver{display:flex}
-#dg .top{display:flex;gap:8px;align-items:center;padding:9px 12px;border-bottom:1px solid var(--li)}
-#dg .top b{flex:1;font-size:13px;color:var(--gr)}
-#dg pre{margin:0;overflow:auto;flex:1;padding:10px 12px 16px;font-family:ui-monospace,Menlo,Consolas,monospace;
-        font-size:11.5px;line-height:1.6;white-space:pre-wrap;word-break:break-word;color:#b9c0cc}
-/* ---------- ajustes para telefono ---------- */
-@media (max-width: 480px) {
-  header{padding:10px 12px;gap:6px;flex-wrap:nowrap}
-  header h1{font-size:16px}
-  #ct{font-size:11px;overflow:hidden;text-overflow:ellipsis}
-  .bt{padding:7px 10px}
-  .bt .txt{display:none}            /* solo el icono: cabe todo en una linea */
-  .fi{padding:8px 12px;gap:8px;flex-wrap:nowrap}
-  select,input[type=search]{flex:1 1 0;padding:9px 10px;font-size:13.5px}
-  footer{padding:10px 12px 12px;padding-bottom:calc(12px + env(safe-area-inset-bottom))}
-  .ba{margin-top:8px;gap:10px}
-  .co{gap:2px;margin-top:6px}
-  .sa{width:44px}
-}
-/* En pantallas tactiles sobra el volumen: estan los botones del telefono */
-@media (pointer: coarse) {
-  .vo{display:none}
-}
+:root{--bg:#0b0d12;--surface:#11151c;--surface2:#181d26;--surface3:#202631;--line:#2a313d;--text:#f3f5f7;--muted:#929aa8;--accent:#35d07f;--accent2:#8af0b5;--danger:#ff6b73;--shadow:0 18px 55px rgba(0,0,0,.35)}
+*{box-sizing:border-box}html,body{height:100%;overscroll-behavior:none}body{margin:0;font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:radial-gradient(1000px 600px at 50% -200px,#18221f 0%,var(--bg) 58%);color:var(--text);display:flex;flex-direction:column;overflow:hidden;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}button,input,select{font:inherit}button{border:0}.sr{position:absolute!important;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
+#ini{position:fixed;inset:0;background:linear-gradient(145deg,#0b0d12,#111a16);z-index:100;display:none;overflow-y:auto}.caja{max-width:470px;margin:0 auto;padding:58px 22px 70px;display:flex;flex-direction:column;gap:14px;align-items:center}.brandmark{width:88px;height:88px;border-radius:24px;box-shadow:var(--shadow)}.caja h1{font-size:28px;margin:0;letter-spacing:-.6px}.caja .su{color:var(--muted);font-size:14px;margin:0 0 8px;text-align:center;line-height:1.6}.campo{width:100%;background:var(--surface);border:1px solid var(--line);color:var(--text);padding:14px;border-radius:14px;font-size:15px;outline:none}.campo:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(53,208,127,.12)}.eti{width:100%;font-size:12px;color:var(--muted);margin:5px 0 -7px}.pri{width:100%;background:var(--accent);color:#07130c;font-weight:800;font-size:16px;padding:15px;border-radius:14px;cursor:pointer;box-shadow:0 8px 25px rgba(53,208,127,.18)}.pri:hover{filter:brightness(1.06)}.pri:disabled{opacity:.55;cursor:default}details{width:100%;background:rgba(17,21,28,.8);border:1px solid var(--line);border-radius:14px;padding:14px 16px;font-size:13px;color:var(--muted)}details summary{cursor:pointer;color:var(--text);font-size:14px}details ol{margin:12px 0 0;padding-left:20px;line-height:1.85}details a{color:var(--accent)}details code{background:#080a0e;padding:2px 5px;border-radius:4px;word-break:break-all}.err{width:100%;background:#2b1519;border:1px solid #633038;color:#ffabb0;padding:12px 14px;border-radius:12px;font-size:13px;line-height:1.55;display:none}.err.ver{display:block}
+header{padding:14px 18px 10px;border-bottom:1px solid rgba(255,255,255,.06);display:flex;gap:9px;align-items:center;flex-wrap:wrap;background:rgba(11,13,18,.72);backdrop-filter:blur(16px);z-index:3}header h1{font-size:18px;margin:0;letter-spacing:-.2px}#ct{color:var(--muted);font-size:12px;flex:1;white-space:nowrap}.bt{background:var(--surface2);border:1px solid var(--line);color:var(--text);padding:8px 11px;border-radius:10px;font-size:13px;cursor:pointer;white-space:nowrap}.bt:hover{border-color:var(--accent);color:var(--accent)}.bt.oculto{display:none}
+.fi{padding:10px 16px;display:flex;gap:9px;flex-wrap:wrap;background:rgba(11,13,18,.62);backdrop-filter:blur(12px);z-index:2}.fi select,.fi input{background:var(--surface);border:1px solid var(--line);color:var(--text);padding:10px 12px;border-radius:11px;font-size:14px;outline:none;min-width:0}.fi input{flex:1 1 220px}.fi select{flex:0 1 260px}.fi input:focus,.fi select:focus{border-color:var(--accent)}
+#ls{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:8px 9px 180px;scrollbar-gutter:stable}.sectionbar{max-width:900px;margin:3px auto 7px;padding:0 8px;color:var(--muted);font-size:12px;display:flex;justify-content:space-between}.pi{max-width:900px;margin:1px auto;display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:13px;cursor:pointer;transition:background .15s,transform .15s}.pi:active{transform:scale(.995);background:var(--surface2)}@media(hover:hover){.pi:hover{background:var(--surface)}}.pi.ac{background:rgba(53,208,127,.10);box-shadow:inset 3px 0 var(--accent)}.pi.ac .nm{color:var(--accent2)}.nu{width:28px;text-align:center;color:var(--muted);font-size:11px;flex:none;font-variant-numeric:tabular-nums}.cover{width:42px;height:42px;border-radius:9px;background:linear-gradient(135deg,#202732,#11151c);display:grid;place-items:center;flex:none;overflow:hidden}.cover svg{width:20px;opacity:.55}.in{min-width:0;flex:1}.nm,.sb{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.nm{font-size:14px;font-weight:600}.sb{color:var(--muted);font-size:12px;margin-top:3px}.fav{width:36px;height:36px;background:transparent;color:var(--muted);border-radius:50%;cursor:pointer;font-size:19px;flex:none}.fav:hover{background:var(--surface3);color:var(--accent)}.fav.on{color:#ff6680}.va{max-width:650px;margin:0 auto;color:var(--muted);padding:45px 18px;font-size:14px;line-height:1.7;text-align:center}.loadbar{height:3px;width:100%;background:var(--surface3);overflow:hidden;border-radius:99px}.loadbar i{display:block;height:100%;width:35%;background:var(--accent);animation:load 1.1s infinite ease-in-out}@keyframes load{0%{transform:translateX(-120%)}100%{transform:translateX(300%)}}
+footer{position:relative;border-top:1px solid var(--line);background:rgba(17,21,28,.96);backdrop-filter:blur(20px);padding:11px 16px calc(14px + env(safe-area-inset-bottom));box-shadow:0 -18px 50px rgba(0,0,0,.22);z-index:5}.now{max-width:900px;margin:auto;display:grid;grid-template-columns:54px 1fr auto;gap:11px;align-items:center}.nowcover{width:54px;height:54px;border-radius:11px;background:linear-gradient(135deg,#263029,#171c23);display:grid;place-items:center}.nowcover svg{width:25px;opacity:.65}#ti{font-size:14px;font-weight:750;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#es{font-size:11px;color:var(--muted);min-height:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.quick{display:flex;gap:3px}.ico{background:transparent;color:var(--text);cursor:pointer;padding:8px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center}.ico:hover{background:var(--surface3)}.ico svg{width:20px;height:20px;fill:currentColor}.md.on{color:var(--accent)}.md .uno{position:absolute;font-size:9px;font-weight:800;top:4px;right:2px}.sa{font-size:11px;font-weight:700;width:43px;height:38px;color:var(--muted)}#pl{background:var(--text);color:#050706;width:48px;height:48px;margin:0 5px;box-shadow:0 5px 18px rgba(255,255,255,.08)}#pl:hover{background:#fff}#pl svg{width:23px;height:23px}.ba{display:flex;align-items:center;gap:10px;font-size:11px;color:var(--muted);margin:8px auto 0;max-width:900px;font-variant-numeric:tabular-nums}.ba .tm{width:36px;flex:none}.ba .tm.der{text-align:right}.ba .env{position:relative;flex:1;display:flex;align-items:center;min-width:0}#bf{position:absolute;left:0;height:3px;background:#4d5665;border-radius:2px;pointer-events:none;top:50%;margin-top:-2px}input[type=range]{flex:1;width:100%;accent-color:var(--accent);height:22px;min-width:0;background:transparent;margin:0}.controls{display:flex;justify-content:center;align-items:center;gap:4px;margin-top:4px}.vo{display:flex;align-items:center;gap:7px;justify-content:center;margin:3px auto 0;color:var(--muted);max-width:260px}.vo svg{width:16px;height:16px;fill:currentColor}.vo input{width:150px}#av{background:#b0202a;color:#fff;padding:11px 16px;font-size:13px;line-height:1.5;display:none}
+#expand{display:none}.expanded{display:none}
+@media(max-width:650px){header{padding:11px 12px 8px}header h1{font-size:17px}.fi{padding:8px 11px}.fi select{flex:1 1 100%;}.fi input{flex:1 1 100%}#ls{padding-left:6px;padding-right:6px;padding-bottom:165px}.pi{padding:9px 8px}.nu{width:22px}.cover{width:40px;height:40px}.now{grid-template-columns:44px 1fr auto}.nowcover{width:44px;height:44px}.quick .fav{display:none}.quick #expand{display:inline-flex}.controls{margin-top:2px}.vo{display:none}footer{padding-left:10px;padding-right:10px}.mobile-hide{display:none}}
+@media(min-width:900px){footer{padding-left:24px;padding-right:24px}}
+#playerFull{position:fixed;inset:0;z-index:20;background:linear-gradient(145deg,#10151a,#080a0e);display:none;flex-direction:column;padding:calc(18px + env(safe-area-inset-top)) 22px calc(22px + env(safe-area-inset-bottom))}.pf-top{display:flex;justify-content:space-between;align-items:center;color:var(--muted)}.pf-art{width:min(76vw,430px);aspect-ratio:1;margin:auto;border-radius:26px;background:linear-gradient(145deg,#27352e,#151a21);display:grid;place-items:center;box-shadow:var(--shadow)}.pf-art svg{width:28%;opacity:.65}.pf-title{text-align:center;margin:24px auto 8px;max-width:600px}.pf-title b{font-size:22px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.pf-title span{font-size:13px;color:var(--muted)}.pf-controls{max-width:650px;width:100%;margin:10px auto 0}.pf-buttons{display:flex;justify-content:center;align-items:center;gap:12px;margin-top:7px}.pf-buttons .ico{padding:12px}.pf-buttons #pfplay{width:64px;height:64px;background:var(--text);color:#050706}.pf-buttons #pfplay svg{width:29px;height:29px}.closefull{background:var(--surface2);color:var(--text);border:1px solid var(--line);border-radius:50%;width:40px;height:40px;cursor:pointer}
 </style>
 </head>
 <body>
 
 <div id="av"></div>
 
-<script>
-// Version de ESTE archivo. app.js declara la suya; si no coinciden, se avisa.
-var HTML_VER = '5';
-var yaHuboError = false;
-
-function avisar(t) {
-  var a = document.getElementById('av');
-  if (!a) return;
-  a.style.display = 'block';
-  a.innerHTML = t;
-}
-
-// Si el JavaScript falla, se ve en pantalla en vez de quedarse todo mudo.
-window.onerror = function (m, f, l) {
-  yaHuboError = true;
-  avisar('<b>Error de JavaScript</b><br>' + m +
-    '<br><small>' + String(f || '').split('/').pop() + ' linea ' + l + '</small>');
-  return false;
-};
-
-setTimeout(function () {
-  if (window.__LISTO && window.APP_VER === HTML_VER) return;   // todo al dia
-  if (yaHuboError) return;                                     // el error real ya esta en pantalla
-
-  // ¿la app esta viva? (hay canciones en pantalla o pide el enlace)
-  var ini = document.getElementById('ini');
-  var viva = !!document.querySelector('.pi') ||
-             (ini && ini.className.indexOf('ver') >= 0);
-
-  var suya = window.APP_VER ? ('la v' + window.APP_VER) : 'una anterior a la v5';
-
-  if (viva) {
-    avisar('<b>app.js esta desactualizado.</b><br>La app funciona, pero index.html es la v' +
-           HTML_VER + ' y app.js es ' + suya + '. Vuelve a subir <b>app.js</b> a GitHub y ' +
-           'abre la direccion con <b>?reset=1</b> al final.');
-  } else if (!window.APP_VER) {
-    avisar('<b>app.js no se cargo.</b><br>Puede faltar en GitHub o estar incompleto. ' +
-           'Revisa que este subido y abre la direccion con <b>?reset=1</b> al final.');
-  } else {
-    avisar('<b>app.js se interrumpio a mitad.</b><br>Quedo incompleto al subirlo. Subelo otra vez.');
-  }
-}, 4000);
-</script>
-
 <!-- ================= pantalla de inicio ================= -->
 <div id="ini">
   <div class="caja">
-    <img src="icon-192.png" alt="">
+    <img class="brandmark" src="icon-192.png" alt="">
     <h1>Mi Música</h1>
     <p class="su">Pega el enlace de tu carpeta pública de Google Drive y listo.</p>
 
@@ -203,31 +61,34 @@ setTimeout(function () {
 
 <!-- ================= app ================= -->
 <header>
-  <h1>🎵 Mi Música <span class="se">v5</span></h1>
+  <h1>🎵 Mi Música</h1>
   <span id="ct"></span>
+  <button class="bt" id="bfav">♡ Favoritos</button>
   <button class="bt oculto" id="bi">⬇ Instalar</button>
-  <button class="bt" id="bc">📁<span class="txt"> Cambiar</span></button>
+  <button class="bt" id="bc">📁 Cambiar</button>
   <button class="bt" id="br" title="Volver a leer la carpeta">↻</button>
-  <button class="bt" id="bd" title="Probar esta canción">🔎</button>
 </header>
 
 <div class="fi">
   <select id="fc"><option value="">Todas las carpetas</option></select>
-  <input id="bu" type="search" placeholder="Buscar canción o artista…" autocomplete="off">
+  <input id="bu" type="search" placeholder="Buscar canción, artista o álbum…" autocomplete="off">
 </div>
 
 <audio id="au" preload="auto" playsinline></audio>
 <main id="ls"><div class="va">Cargando…</div></main>
 
 <footer>
-  <div id="ti">Elige una canción</div>
-  <div id="es"></div>
+  <div class="now">
+    <div class="nowcover"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 3v10.55A4 4 0 1 0 14 17V7h4V3h-6z"/></svg></div>
+    <div><div id="ti">Elige una canción</div><div id="es"></div></div>
+    <div class="quick"><button class="ico" id="expand" title="Abrir reproductor">↗</button><button class="ico" id="mfav" title="Favorito">♡</button></div>
+  </div>
   <div class="ba">
     <span class="tm" id="t1">0:00</span>
     <span class="env"><i id="bf"></i><input id="pr" type="range" min="0" max="1000" value="0" aria-label="Posición"></span>
     <span class="tm der" id="t2">0:00</span>
   </div>
-  <div class="co">
+  <div class="controls">
     <button class="ico md" id="al" title="Aleatorio (S)"><svg viewBox="0 0 24 24"><path d="M10.59 9.17 5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/></svg></button>
     <button class="ico" id="an" title="Anterior (P)"><svg viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg></button>
     <button class="ico sa" id="a10">−10s</button>
@@ -242,13 +103,11 @@ setTimeout(function () {
   </div>
 </footer>
 
-<div id="dg">
-  <div class="top">
-    <b>Prueba de la canción</b>
-    <button class="bt" id="dgc">Copiar</button>
-    <button class="bt" id="dgx">Cerrar</button>
-  </div>
-  <pre id="dgt"></pre>
+<div id="playerFull">
+  <div class="pf-top"><span>REPRODUCIENDO</span><button class="closefull" id="closefull">×</button></div>
+  <div class="pf-art"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 3v10.55A4 4 0 1 0 14 17V7h4V3h-6z"/></svg></div>
+  <div class="pf-title"><b id="pfti">Elige una canción</b><span id="pfes"></span></div>
+  <div class="pf-controls"><div class="ba"><span class="tm" id="pft1">0:00</span><span class="env"><i id="pbf"></i><input id="pfpr" type="range" min="0" max="1000" value="0" aria-label="Posición"></span><span class="tm der" id="pft2">0:00</span></div><div class="pf-buttons"><button class="ico" id="pfan">◀</button><button class="ico" id="pfm10">−10</button><button class="ico" id="pfplay">▶</button><button class="ico" id="pfd10">+10</button><button class="ico" id="pfsi">▶</button></div></div>
 </div>
 
 <script src="config.js"></script>

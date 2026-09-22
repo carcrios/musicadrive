@@ -1,86 +1,97 @@
-# Mi Música — versión simple
+# 🎵 Mi Música — Google Drive Player
 
-Pegas el enlace de tu carpeta pública de Drive y ya suena. Sin iniciar sesión.
+Reproductor musical **PWA, ligero y sin backend** para reproducir una carpeta pública de Google Drive directamente desde el navegador.
 
----
+## ✨ Novedades de la versión 2
 
-## Paso 1 — Hacer pública la carpeta (30 segundos)
+- Interfaz renovada, responsive y optimizada para móvil.
+- ❤️ Favoritos persistentes en el dispositivo.
+- 🎧 Reproductor compacto y reproductor a pantalla completa.
+- 📱 Mejor experiencia PWA y controles de pantalla bloqueada mediante Media Session.
+- 🔎 Búsqueda por título, artista, álbum y carpeta.
+- 📂 Carpetas y subcarpetas de Google Drive.
+- 🔀 Aleatorio y 🔁 repetición.
+- ⏪ / ⏩ saltos de 10 segundos.
+- 💾 Guarda última canción, posición, volumen, filtro y preferencias.
+- 🏷️ Lectura de etiquetas ID3 para título, artista y álbum.
+- ⚡ Caché local de la biblioteca para abrir más rápido.
+- 🔐 La clave API puede introducirse en el dispositivo y dejar `config.js` sin secretos.
 
-En Google Drive, clic derecho sobre tu carpeta de música → **Compartir** → en *Acceso general* elige **Cualquier persona con el enlace**, rol **Lector**. **Copiar enlace**.
+## 🚀 Publicarlo en GitHub Pages
 
-> Esto significa que cualquiera que tenga ese enlace puede oír tu música. No aparece en buscadores ni la encuentra nadie por casualidad, pero conviene que lo sepas. Si prefieres que siga privada, dímelo y te paso la otra versión, que pide iniciar sesión pero no expone nada.
+1. Crea un repositorio público en GitHub.
+2. Sube los archivos de esta carpeta al repositorio.
+3. Ve a **Settings → Pages**.
+4. Selecciona **Deploy from a branch**, rama `main` y carpeta `/ (root)`.
+5. Abre la URL que te entregue GitHub Pages.
 
-## Paso 2 — Sacar la clave de API (2 minutos, una sola vez)
+## 🔑 Configurar Google Drive API
 
-1. Entra a **https://console.cloud.google.com/apis/credentials** y crea un proyecto cualquiera.
-2. Busca **Google Drive API** en el buscador de arriba y toca **Habilitar**.
-3. Vuelve a **Credenciales** → **Crear credenciales** → **Clave de API**.
-4. Copia la clave (empieza por `AIza...`).
+La aplicación utiliza la Google Drive API v3 para listar archivos de una carpeta pública.
 
-*Opcional pero recomendado:* toca **Restringir clave** → *Restricciones de aplicación* → **Sitios web** → añade `https://TU-USUARIO.github.io/*`. Así nadie más puede usar tu clave.
+1. Crea un proyecto en Google Cloud.
+2. Habilita **Google Drive API**.
+3. Crea una **API Key**.
+4. En Google Drive, comparte la carpeta como **Cualquier persona con el enlace → Lector**.
+5. Abre Mi Música y pega el enlace de la carpeta y la API Key.
 
-## Paso 3 — Publicar la app
+### Recomendación de seguridad
 
-1. Crea un repositorio en **https://github.com** (público).
-2. **Add file → Upload files** y sube estos 8 archivos:
+No publiques una API Key personal dentro de `config.js` en un repositorio público.
 
-   ```
-   index.html   app.js   config.js   sw.js
-   manifest.webmanifest   icon-192.png   icon-512.png   icon-maskable.png
-   ```
+Si quieres restringir la clave, utiliza las restricciones de aplicación de Google Cloud para limitarla a tu dominio de GitHub Pages, por ejemplo:
 
-3. **Settings → Pages →** Source: *Deploy from a branch*, rama **main**, carpeta **/ (root)**. **Save**.
-4. A los dos minutos tendrás `https://TU-USUARIO.github.io/musica/`.
+```text
+https://TU-USUARIO.github.io/*
+```
 
-## Paso 4 — Abrir y usar
+También puedes dejar `config.js` así:
 
-Abre la dirección: te pide el enlace de la carpeta y la clave, tocas **Empezar** y aparece tu música. Queda guardado en el dispositivo; la próxima vez abre directo.
+```js
+window.API_KEY = '';
+window.CARPETA = '';
+window.DRIVE_API = 'https://www.googleapis.com/drive/v3';
+```
 
-**Instalar:** en Android sale el botón **⬇ Instalar** (o menú ⋮ → *Instalar aplicación*). En iPhone, Compartir → *Añadir a pantalla de inicio*. En el computador, el ícono de instalar en la barra de direcciones.
+En ese caso cada usuario introduce sus propios datos y quedan guardados únicamente en su navegador mediante `localStorage`.
 
-> Si quieres que no pregunte nada en ningún dispositivo, pon la clave y la carpeta dentro de `config.js` antes de subirlo.
+> ⚠️ La carpeta de Drive debe ser pública mediante enlace. Cualquier persona que tenga ese enlace puede acceder a los archivos según los permisos de Drive.
 
----
+## 📁 Estructura
 
-## Qué trae
+```text
+mi-musica/
+├── index.html
+├── app.js
+├── config.js
+├── sw.js
+├── manifest.webmanifest
+├── icon-192.png
+├── icon-512.png
+└── icon-maskable.png
+```
 
-| | |
+## 🎮 Atajos de teclado
+
+| Tecla | Acción |
 |---|---|
-| 📁 Cambiar | Otra carpeta u otra clave |
-| ↻ | Volver a leer la carpeta si agregaste música |
-| Desplegable | Reproducir solo una subcarpeta |
-| Buscador | Por canción, artista o álbum, sin importar las tildes |
-| −10s / +10s | Atrasar y adelantar |
-| Barra | Saltar a cualquier punto, al instante |
-| 🔀 / 🔁 | Aleatorio y repetir |
+| `Espacio` | Play / pausa |
+| `←` / `→` | −10 / +10 segundos |
+| `Shift + ←` / `Shift + →` | −30 / +30 segundos |
+| `N` | Siguiente |
+| `P` | Anterior |
+| `S` | Aleatorio |
+| `R` | Repetición |
+| `Esc` | Cerrar reproductor ampliado |
 
-Lee las etiquetas ID3, así que un archivo llamado `03 - pista.mp3` aparece con su título y artista reales, también en la pantalla bloqueada. Recuerda dónde quedaste. Funciona con la pantalla apagada.
+## 🧩 Notas técnicas
 
-**Teclado:** `Espacio` play/pausa · `→` `←` ±10 s · `N` / `P` siguiente y anterior · `S` aleatorio · `R` repetir.
+- El audio se solicita directamente al navegador desde Google Drive; no se sube ni se retransmite mediante un servidor propio.
+- La biblioteca se almacena comprimida en `localStorage` para reducir espacio.
+- Los favoritos, sesión y etiquetas también se guardan localmente.
+- El Service Worker únicamente almacena los recursos de la aplicación; no intercepta el audio de Google Drive.
+- La compatibilidad con reproducción en segundo plano y controles de pantalla bloqueada depende del navegador y sistema operativo.
 
----
+## 📄 Licencia
 
-## Qué se simplificó frente a la versión anterior
-
-| | Con inicio de sesión | Esta |
-|---|---|---|
-| Trámite en Google | proyecto + API + pantalla de consentimiento + usuarios de prueba + ID de OAuth | proyecto + API + clave |
-| Al abrir | botón *Conectar*, aviso de "app no verificada" | nada, entra directo |
-| Token | caduca cada hora, hay que renovarlo | no hay token |
-| Piezas que pueden fallar | página, service worker de puente, Google Identity | página |
-| Privacidad | carpeta privada | carpeta pública con enlace |
-
-El audio ahora lo pide el navegador directamente a Google, sin intermediarios: por eso arranca en ~150 ms y saltar es instantáneo.
-
----
-
-## Si algo falla
-
-| Mensaje | Qué hacer |
-|---|---|
-| "La clave de API no es válida" | Revisa que la copiaste completa; empieza por `AIza` |
-| "Falta activar la API de Drive" | Paso 2, punto 2: habilitar **Google Drive API** |
-| "La carpeta no es pública" | Paso 1: compartir como *Cualquier persona con el enlace* |
-| "La clave está restringida a otra página" | En Google Cloud, añade `https://TU-USUARIO.github.io/*` |
-| "No encontré esa carpeta" | El enlace está mal; cópialo otra vez desde Drive |
-| Canciones nuevas no salen | Toca **↻** |
+MIT. Puedes modificar y adaptar el proyecto. Si lo redistribuyes, conserva el aviso de licencia.

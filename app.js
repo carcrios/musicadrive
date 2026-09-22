@@ -7,15 +7,14 @@
    ========================================================= */
 'use strict';
 
-window.APP_VER = '5';   // debe coincidir con HTML_VER en index.html
-
 var $ = function (i) { return document.getElementById(i); };
 var API = window.DRIVE_API || 'https://www.googleapis.com/drive/v3';
 var CARPETA_MIME = 'application/vnd.google-apps.folder';
 var EXT = /\.(mp3|m4a|aac|ogg|oga|opus|wav|flac|webm)$/i;
 
 var LL = { clave: 'mus_clave', carpeta: 'mus_carpeta', lista: 'mus_lista',
-           sesion: 'mus_sesion', tags: 'mus_tags' };
+           sesion: 'mus_sesion', tags: 'mus_tags', fav: 'mus_favoritos' };
+var favoritos = leer(LL.fav, {});
 
 var audio = $('au');
 var clave = '', carpeta = '';
@@ -85,7 +84,8 @@ function mensajeError(r, cuerpo) {
 function drive(ruta) {
   var sep = ruta.indexOf('?') >= 0 ? '&' : '?';
   return fetch(API + ruta + sep + 'key=' + encodeURIComponent(clave)).then(function (r) {
-    return r.json()['catch'](function () { return null; }).then(function (j) {
+    return r.text().then(function (txt) { var j = null; try { j = txt ? JSON.parse(txt) : null; } catch (e) {}
+
       if (!r.ok) throw new Error(mensajeError(r, j));
       return j;
     });
@@ -195,6 +195,7 @@ function cargarBiblioteca(forzar) {
 
 function preparar() {
   tags = leer(LL.tags, {});
+  favoritos = leer(LL.fav, {});
   cn.forEach(function (s) {
     var g = tags[s.id];
     if (g) s.k = norm((g.t || s.n) + ' ' + (g.a || '') + ' ' + (g.b || '') + ' ' + s.n + ' ' + s.c);
@@ -214,6 +215,7 @@ function preparar() {
   var idx = m && m.id ? indice(m.id) : -1;
   orden(idx >= 0 ? idx : null);
   pintar();
+  actualizarFavoritosUI();
   if (idx >= 0) {
     var s = cn[idx];
     $('ti').textContent = titulo(s);
@@ -270,13 +272,16 @@ function titulo(s) {
   var g = tags[s.id];
   return g && g.t ? (g.a ? g.t + ' — ' + g.a : g.t) : s.n;
 }
+function iconoMusica(){return '<svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 3v10.55A4 4 0 1 0 14 17V7h4V3h-6z"/></svg>';}
+function esFavorito(id){return !!favoritos[id];}
 function fila(i, n) {
   var s = cn[i], a = act(), g = tags[s.id];
   var nom = g && g.t ? g.t : s.n;
-  var sub = g && g.a ? g.a + (s.c ? ' · ' + s.c : '') : s.c;
+  var sub = g && g.a ? g.a + (g.b ? ' · ' + g.b : '') + (s.c ? ' · ' + s.c : '') : s.c;
   return '<div class="pi' + (a && a.id === s.id ? ' ac' : '') + '" data-i="' + i + '">' +
-    '<div class="nu">' + (n + 1) + '</div><div class="in"><div class="nm">' + esc(nom) + '</div>' +
-    (sub ? '<div class="sb">' + esc(sub) + '</div>' : '') + '</div></div>';
+    '<div class="nu">' + (n + 1) + '</div><div class="cover">' + iconoMusica() + '</div><div class="in"><div class="nm">' + esc(nom) + '</div>' +
+    (sub ? '<div class="sb">' + esc(sub) + '</div>' : '') + '</div>' +
+    '<button class="fav' + (esFavorito(s.id) ? ' on' : '') + '" data-fav="' + esc(s.id) + '" title="' + (esFavorito(s.id) ? 'Quitar de favoritos' : 'Añadir a favoritos') + '">' + (esFavorito(s.id) ? '♥' : '♡') + '</button></div>';
 }
 function pintar() {
   var t = norm($('bu').value.trim());
@@ -371,66 +376,28 @@ function buscarTags(s) {
 }
 
 /* ================= reproduccion ================= */
-var genTocar = 0;      // cada cancion que se pide anula la anterior
-var relojCarga = null;
-
 function tocar(p) {
   if (p < 0 || p >= or.length) return;
   pos = p;
-  var s = act(), mio = ++genTocar;
+  var s = act();
   $('ti').textContent = titulo(s);
   est('Cargando…');
   marcar();
   guardarSesion();
 
-  clearTimeout(relojCarga);
-  // Si en 15 s no ha empezado a sonar, preguntarle a Google que pasa.
-  relojCarga = setTimeout(function () {
-    if (mio === genTocar && audio.paused) diagnosticar(s, null);
-  }, 15000);
-
-  // Asignar src ya inicia la carga; llamar a load() ademas aborta el play().
   audio.src = urlAudio(s);
+  audio.load();
   mediaInfo(s);
-
+  actualizarFavoritosUI();
+  actualizarFull();
   var pr = audio.play();
   if (pr && pr['catch']) pr['catch'](function (e) {
-    if (mio !== genTocar) return;                       // el usuario ya eligio otra
-    var m = (e && e.message) || '';
-    // Estas dos NO son fallos: pasan al cambiar rapido de cancion.
-    if (e && (e.name === 'AbortError' || /interrupted by|interrupted because/i.test(m))) return;
-    if (e && e.name === 'NotAllowedError') { est('Toca ▶ para reproducir'); return; }
-    diagnosticar(s, e);
+    if (e && e.name === 'NotAllowedError') est('Toca ▶ para reproducir');
+    else est('No se pudo reproducir: ' + (e.message || e));
   });
-
   buscarTags(s);
   if (pos + 1 < or.length) buscarTags(cn[or[pos + 1]]);
 }
-
-/** Cuando el audio no arranca, se le pregunta a Google por el archivo
- *  y se muestra SU respuesta, que es la que explica de verdad el problema. */
-function diagnosticar(s, e) {
-  est('Comprobando el archivo…');
-  fetch(urlAudio(s), { headers: { Range: 'bytes=0-1' } }).then(function (r) {
-    if (r.ok || r.status === 206) {
-      // Google entrega el archivo: el problema es del reproductor, no del acceso.
-      est(e ? ('No se pudo reproducir: ' + (e.message || e))
-            : 'El archivo llega pero el navegador no lo reproduce. ¿Formato no compatible?');
-      return;
-    }
-    if (r.status === 404) {                    // es ESTA cancion, no la carpeta
-      est('Esa canción ya no está en Drive. Pasando a la siguiente…');
-      setTimeout(function () { sig(true); }, 1200);
-      return;
-    }
-    return r.json()['catch'](function () { return null; }).then(function (j) {
-      est(mensajeError(r, j));
-    });
-  })['catch'](function () {
-    est('Sin conexión con Google. Revisa el internet.');
-  });
-}
-
 function sig(auto) {
   if (!or.length) return;
   if (auto && rep === 'una') { audio.currentTime = 0; audio.play(); return; }
@@ -484,72 +451,6 @@ function guardarSesion() {
   });
 }
 
-/* ================= prueba de una cancion =================
-   Pregunta a Google por el archivo y ademas intenta abrirlo con un
-   reproductor aparte. Muestra todo lo que contesta, sin interpretar. */
-function probarCancion() {
-  var s = act() || cn[0];
-  if (!s) { alert('Primero elige una canción.'); return; }
-
-  var L = [];
-  var url = urlAudio(s);
-  var urlOculta = url.replace(/key=[^&]*/, 'key=' + (clave ? clave.slice(0, 6) + '…' : 'VACIA'));
-
-  L.push('Cancion : ' + s.n);
-  L.push('Carpeta : ' + (s.c || '(raiz)'));
-  L.push('ID      : ' + s.id);
-  L.push('Tipo    : ' + s.m + '   Tamano: ' + (s.z ? (s.z / 1048576).toFixed(1) + ' MB' : 'desconocido'));
-  L.push('URL     : ' + urlOculta);
-  L.push('');
-
-  var pintar2 = function () { $('dgt').textContent = L.join('\n'); };
-  $('dgt').textContent = L.join('\n') + '\nProbando...';
-  $('dg').className = 'ver';
-
-  // no-store: que pregunte de verdad y no conteste desde la copia del navegador
-  fetch(url, { headers: { Range: 'bytes=0-1023' }, cache: 'no-store' }).then(function (r) {
-    L.push('--- Respuesta de Google ---');
-    L.push('HTTP          : ' + r.status + ' ' + (r.statusText || ''));
-    L.push('Content-Type  : ' + (r.headers.get('content-type') || '(ninguno)'));
-    L.push('Content-Range : ' + (r.headers.get('content-range') || '(ninguno)'));
-    L.push('Accept-Ranges : ' + (r.headers.get('accept-ranges') || '(ninguno)'));
-    return r.clone().arrayBuffer().then(function (b) {
-      L.push('Bytes         : ' + b.byteLength);
-      var v = new Uint8Array(b), hex = [];
-      for (var i = 0; i < Math.min(4, v.length); i++) hex.push(v[i].toString(16));
-      L.push('Primeros bytes: ' + hex.join(' ') +
-        (v[0] === 0x49 && v[1] === 0x44 && v[2] === 0x33 ? '   (ID3: es un MP3)'
-         : (v[0] === 0xff ? '   (trama MP3)' : '   (no parece audio)')));
-      if (!r.ok) {
-        return r.clone().text().then(function (t) { L.push('Cuerpo        : ' + t.slice(0, 400)); });
-      }
-    });
-  })['catch'](function (e) {
-    L.push('--- Respuesta de Google ---');
-    L.push('LA PETICION FALLO: ' + (e.message || e));
-    L.push('(suele ser CORS, sin internet, o la clave bloqueada)');
-  }).then(function () {
-    L.push('');
-    L.push('--- Prueba del reproductor ---');
-    pintar2();
-    var a = new Audio(), fin = false;
-    var cerrar = function (t) { if (fin) return; fin = true; L.push(t); pintar2(); };
-    a.addEventListener('loadedmetadata', function () {
-      cerrar('OK: metadatos leidos, duracion ' +
-        (isFinite(a.duration) ? a.duration.toFixed(1) + ' s' : 'desconocida'));
-    });
-    a.addEventListener('error', function () {
-      var c = a.error ? a.error.code : 0;
-      var nom = { 1: 'cancelado', 2: 'error de red', 3: 'no se pudo decodificar',
-                  4: 'formato no soportado o no accesible' }[c] || 'desconocido';
-      cerrar('ERROR ' + c + ': ' + nom + (a.error && a.error.message ? '  [' + a.error.message + ']' : ''));
-    });
-    setTimeout(function () { cerrar('SIN RESPUESTA en 12 segundos.'); }, 12000);
-    a.src = url + '&_=' + Date.now();   // evita la copia guardada del navegador
-    a.load();
-  });
-}
-
 /* ================= pantalla de inicio ================= */
 function abrirInicio() {
   $('ini').className = 'ver';
@@ -586,8 +487,41 @@ $('bv').onclick = function () {
   });
 };
 
+function actualizarFavoritosUI(){
+  var a=act(), mf=$('mfav');
+  if(mf){mf.textContent=a&&esFavorito(a.id)?'♥':'♡'; mf.className='ico'+(a&&esFavorito(a.id)?' md on':'');}
+  var bf=$('bfav'); if(bf) bf.textContent=Object.keys(favoritos).length?'♥ Favoritos ('+Object.keys(favoritos).length+')':'♡ Favoritos';
+}
+function alternarFavorito(id){
+  if(!id)return;
+  if(favoritos[id]) delete favoritos[id]; else favoritos[id]=Date.now();
+  guardar(LL.fav,favoritos); actualizarFavoritosUI(); pintar();
+}
+function mostrarFavoritos(){
+  if(!Object.keys(favoritos).length){est('Todavía no tienes favoritos'); return;}
+  $('bu').value=''; fc=''; $('fc').value='';
+  vis=ambito().filter(function(i){return esFavorito(cn[i].id);}); dib=0;
+  if(!vis.length){$('ls').innerHTML='<div class="va">Tus favoritos ya no están en esta biblioteca.</div>';return;}
+  $('ls').innerHTML='<div class="sectionbar"><span>♥ FAVORITOS</span><span>'+vis.length+' canciones</span></div><div id="fs"></div><div id="ms"></div>';mas();
+}
+function abrirFull(){
+  var a=act(); if(!a)return;
+  $('playerFull').style.display='flex'; actualizarFull();
+}
+function cerrarFull(){$('playerFull').style.display='none';}
+function actualizarFull(){
+  var a=act(), g=a?tags[a.id]:null;
+  $('pfti').textContent=a?(g&&g.t||a.n):'Elige una canción';
+  $('pfes').textContent=a?((g&&g.a)||a.c||'') : '';
+  $('pfplay').textContent=audio.paused?'▶':'Ⅱ';
+  $('pft1').textContent=fmt(audio.currentTime||0); $('pft2').textContent=fmt(audio.duration);
+  $('pfpr').value=isFinite(audio.duration)&&audio.duration?audio.currentTime/audio.duration*1000:0;
+}
+
 /* ================= controles ================= */
 $('ls').addEventListener('click', function (e) {
+  var fav = e.target.closest ? e.target.closest('[data-fav]') : null;
+  if (fav) { e.stopPropagation(); alternarFavorito(fav.getAttribute('data-fav')); return; }
   var el = e.target.closest ? e.target.closest('.pi') : null;
   if (!el) return;
   pendiente = 0;
@@ -608,15 +542,16 @@ $('fc').addEventListener('change', function (e) {
 });
 $('br').onclick = function () { cargarBiblioteca(true); };
 $('bc').onclick = abrirInicio;
-$('bd').onclick = probarCancion;
-$('dgx').onclick = function () { $('dg').className = ''; };
-$('dgc').onclick = function () {
-  var t = $('dgt').textContent;
-  if (navigator.clipboard) navigator.clipboard.writeText(t).then(
-    function () { $('dgc').textContent = '¡Copiado!'; setTimeout(function () { $('dgc').textContent = 'Copiar'; }, 1500); },
-    function () { prompt('Copia esto:', t); });
-  else prompt('Copia esto:', t);
-};
+$('bfav').onclick = mostrarFavoritos;
+$('mfav').onclick = function(){var a=act();if(a)alternarFavorito(a.id);};
+$('expand').onclick = abrirFull;
+$('closefull').onclick = cerrarFull;
+$('pfplay').onclick = function(){ $('pl').onclick(); actualizarFull(); };
+$('pfan').onclick = function(){ ant(); actualizarFull(); };
+$('pfsi').onclick = function(){ sig(false); actualizarFull(); };
+$('pfm10').onclick = function(){ salto(-10); actualizarFull(); };
+$('pfd10').onclick = function(){ salto(10); actualizarFull(); };
+$('pfpr').addEventListener('input',function(){if(isFinite(audio.duration))audio.currentTime=this.value/1000*audio.duration; actualizarFull();});
 
 $('pl').onclick = function () {
   if (!or.length) return;
@@ -662,6 +597,7 @@ audio.addEventListener('timeupdate', function () {
     $('bf').style.width = Math.min(100,
       audio.buffered.end(audio.buffered.length - 1) / audio.duration * 100) + '%';
   }
+  actualizarFull();
   var n = Date.now();
   if (n - ultimo > 5000) { ultimo = n; guardarSesion(); posicion(); }
 });
@@ -669,45 +605,27 @@ audio.addEventListener('loadedmetadata', function () {
   $('t2').textContent = fmt(audio.duration);
   if (pendiente > 0) { try { audio.currentTime = pendiente; } catch (e) {} pendiente = 0; }
   posicion();
+  actualizarFull();
 });
-audio.addEventListener('playing', function () {
-  clearTimeout(relojCarga);
-  var a = act();
-  est(a ? (a.c || '') : '');
-});
+audio.addEventListener('playing', function () { var a = act(); est(a ? (a.c || '') : ''); });
 audio.addEventListener('ended', function () { sig(true); });
 audio.addEventListener('play', function () {
   deberia = true;
   $('i1').style.display = 'none'; $('i2').style.display = '';
   try { navigator.mediaSession.playbackState = 'playing'; } catch (e) {}
   posicion();
+  actualizarFull();
 });
 audio.addEventListener('pause', function () {
   $('i1').style.display = ''; $('i2').style.display = 'none';
   try { navigator.mediaSession.playbackState = 'paused'; } catch (e) {}
   guardarSesion();
+  actualizarFull();
 });
 audio.addEventListener('error', function () {
   if (!audio.src) return;
-  var s = act();
-  if (!s) return;
-  // Antes saltaba a la siguiente sin mirar: con un problema general eso
-  // recorria la biblioteca entera fallando. Ahora primero se averigua.
-  fetch(urlAudio(s), { headers: { Range: 'bytes=0-1' } }).then(function (r) {
-    if (r.status === 404) {                       // solo ese archivo: seguir
-      est('Esa canción ya no está en Drive. Pasando a la siguiente…');
-      setTimeout(function () { sig(true); }, 1200);
-      return;
-    }
-    if (r.ok || r.status === 206) {
-      est('El navegador no pudo reproducir este archivo (formato). Pasando a la siguiente…');
-      setTimeout(function () { sig(true); }, 1200);
-      return;
-    }
-    return r.json()['catch'](function () { return null; }).then(function (j) {
-      est(mensajeError(r, j));                    // problema general: parar y explicar
-    });
-  })['catch'](function () { est('Sin conexión con Google.'); });
+  est('No se pudo leer esa canción. Pasando a la siguiente…');
+  setTimeout(function () { sig(true); }, 1500);
 });
 window.addEventListener('beforeunload', guardarSesion);
 document.addEventListener('visibilitychange', function () {
@@ -717,6 +635,7 @@ document.addEventListener('visibilitychange', function () {
   }
 });
 document.addEventListener('keydown', function (e) {
+  if (e.key === 'Escape' && $('playerFull').style.display === 'flex') { cerrarFull(); return; }
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
   var k = e.key.toLowerCase();
   if (k === ' ') { e.preventDefault(); $('pl').onclick(); }
@@ -734,19 +653,9 @@ if ('mediaSession' in navigator) {
   mh('pause', function () { deberia = false; audio.pause(); });
   mh('nexttrack', function () { sig(false); });
   mh('previoustrack', ant);
+  mh('seekforward', function (d) { salto((d && d.seekOffset) || 10); });
+  mh('seekbackward', function (d) { salto(-((d && d.seekOffset) || 10)); });
   mh('seekto', function (d) { if (isFinite(audio.duration)) audio.currentTime = d.seekTime; });
-
-  // En iPhone los controles de la pantalla bloqueada tienen solo dos ranuras
-  // laterales: si se declaran los saltos de 10 s, iOS los pone ahi y esconde
-  // los botones de cancion anterior y siguiente. Por eso en iPhone no se
-  // declaran: asi salen los de cambiar de cancion, que es lo util fuera de la app.
-  // (Para tener los de 10 s en su lugar, borra la condicion de abajo.)
-  var esIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-              (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-  if (!esIOS) {
-    mh('seekforward', function (d) { salto((d && d.seekOffset) || 10); });
-    mh('seekbackward', function (d) { salto(-((d && d.seekOffset) || 10)); });
-  }
 }
 
 /* ================= instalacion ================= */
@@ -760,29 +669,6 @@ $('bi').onclick = function () {
 };
 window.addEventListener('appinstalled', function () { $('bi').className = 'bt oculto'; });
 
-/* ================= reinicio de emergencia ================= */
-/* Abrir la app con  ?reset=1  al final de la direccion borra la copia
-   guardada y el service worker, y vuelve a empezar de cero.
-   Sirve cuando una actualizacion se queda a medias. */
-if (location.search.indexOf('reset=1') >= 0) {
-  document.getElementById('ls').innerHTML = '<div class="va">Limpiando…</div>';
-  var tareas = [];
-  try { localStorage.clear(); } catch (e) {}
-  if (window.caches && caches.keys) {
-    tareas.push(caches.keys().then(function (k) {
-      return Promise.all(k.map(function (n) { return caches.delete(n); }));
-    }));
-  }
-  if (navigator.serviceWorker && navigator.serviceWorker.getRegistrations) {
-    tareas.push(navigator.serviceWorker.getRegistrations().then(function (rs) {
-      return Promise.all(rs.map(function (r) { return r.unregister(); }));
-    }));
-  }
-  Promise.all(tareas)['catch'](function () {}).then(function () {
-    location.replace(location.pathname);
-  });
-} else
-
 /* ================= arranque ================= */
 (function () {
   if (navigator.serviceWorker) navigator.serviceWorker.register('sw.js')['catch'](function () {});
@@ -794,5 +680,3 @@ if (location.search.indexOf('reset=1') >= 0) {
   if (clave && carpeta) cargarBiblioteca(false);
   else abrirInicio();
 })();
-
-window.__LISTO = true;   // llego al final sin errores
