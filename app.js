@@ -7,6 +7,8 @@
    ========================================================= */
 'use strict';
 
+window.APP_VER = '3';   // debe coincidir con HTML_VER en index.html
+
 var $ = function (i) { return document.getElementById(i); };
 var API = window.DRIVE_API || 'https://www.googleapis.com/drive/v3';
 var CARPETA_MIME = 'application/vnd.google-apps.folder';
@@ -657,4 +659,4 @@ if (location.search.indexOf('reset=1') >= 0) {
   else abrirInicio();
 })();
 
-window.__LISTO = true;   // lo lee el guardia de index.html
+window.__LISTO = true;   // llego al final sin errores

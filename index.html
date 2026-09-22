@@ -122,22 +122,45 @@ input[type=range]{flex:1 1 auto;width:100%;accent-color:var(--ac);height:22px;mi
 <div id="av"></div>
 
 <script>
+// Version de ESTE archivo. app.js declara la suya; si no coinciden, se avisa.
+var HTML_VER = '3';
+var yaHuboError = false;
+
+function avisar(t) {
+  var a = document.getElementById('av');
+  if (!a) return;
+  a.style.display = 'block';
+  a.innerHTML = t;
+}
+
 // Si el JavaScript falla, se ve en pantalla en vez de quedarse todo mudo.
 window.onerror = function (m, f, l) {
-  var a = document.getElementById('av');
-  if (!a) return false;
-  a.style.display = 'block';
-  a.innerHTML = '<b>Error de JavaScript</b><br>' + m +
-    '<br><small>' + String(f || '').split('/').pop() + ' linea ' + l + '</small>';
+  yaHuboError = true;
+  avisar('<b>Error de JavaScript</b><br>' + m +
+    '<br><small>' + String(f || '').split('/').pop() + ' linea ' + l + '</small>');
   return false;
 };
+
 setTimeout(function () {
-  if (!window.__LISTO) {
-    var a = document.getElementById('av');
-    if (!a) return;
-    a.style.display = 'block';
-    a.innerHTML = '<b>La app no arranco.</b><br>Falta un archivo o quedo incompleto. ' +
-      'Revisa que en GitHub esten los 8 archivos, y recarga manteniendo pulsado el boton de recargar.';
+  if (window.__LISTO && window.APP_VER === HTML_VER) return;   // todo al dia
+  if (yaHuboError) return;                                     // el error real ya esta en pantalla
+
+  // ¿la app esta viva? (hay canciones en pantalla o pide el enlace)
+  var ini = document.getElementById('ini');
+  var viva = !!document.querySelector('.pi') ||
+             (ini && ini.className.indexOf('ver') >= 0);
+
+  var suya = window.APP_VER ? ('la v' + window.APP_VER) : 'una anterior a la v3';
+
+  if (viva) {
+    avisar('<b>app.js esta desactualizado.</b><br>La app funciona, pero index.html es la v' +
+           HTML_VER + ' y app.js es ' + suya + '. Vuelve a subir <b>app.js</b> a GitHub y ' +
+           'abre la direccion con <b>?reset=1</b> al final.');
+  } else if (!window.APP_VER) {
+    avisar('<b>app.js no se cargo.</b><br>Puede faltar en GitHub o estar incompleto. ' +
+           'Revisa que este subido y abre la direccion con <b>?reset=1</b> al final.');
+  } else {
+    avisar('<b>app.js se interrumpio a mitad.</b><br>Quedo incompleto al subirlo. Subelo otra vez.');
   }
 }, 4000);
 </script>
@@ -173,7 +196,7 @@ setTimeout(function () {
 
 <!-- ================= app ================= -->
 <header>
-  <h1>🎵 Mi Música <span class="se">v2</span></h1>
+  <h1>🎵 Mi Música <span class="se">v3</span></h1>
   <span id="ct"></span>
   <button class="bt oculto" id="bi">⬇ Instalar</button>
   <button class="bt" id="bc">📁<span class="txt"> Cambiar</span></button>
