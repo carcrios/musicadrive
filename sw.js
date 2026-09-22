@@ -5,7 +5,7 @@
    el respaldo. Asi una version nueva entra sola al recargar, sin tener que
    hacer Ctrl+Shift+R ni borrar los datos del sitio. */
 
-const CACHE = 'mi-musica-2.6.6';
+const CACHE = 'mi-musica-2.6.7';
 const BASE = new URL('./', self.location).pathname;
 const CONCHA = [BASE, BASE + 'index.html', BASE + 'app.js', BASE + 'config.js',
                 BASE + 'manifest.webmanifest', BASE + 'icon-192.png', BASE + 'icon-512.png'];

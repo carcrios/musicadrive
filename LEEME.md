@@ -1,4 +1,4 @@
-# Mi Música 2.6.7 — controles y avance automático
+# Mi Música 2.6.6 — controles de pantalla bloqueada
 
 Esta versión congela el funcionamiento de reproducción y evita cambios experimentales.
 
@@ -25,16 +25,6 @@ En Android y escritorio sí caben ambos, así que allí se declaran los cuatro. 
 
 
 ---
-
-## Avance automático de canción
-
-Al terminar una canción no pasaba a la siguiente con la pantalla bloqueada. Eran dos cosas sumadas:
-
-1. **Se soltaba el elemento de audio.** Antes de cada canción se hacía `pause()`, `removeAttribute('src')` y `load()`. Con la pantalla bloqueada, eso hace que iOS retire el permiso de audio, y ya no se puede volver a arrancar. Ahora, cuando el cambio es automático, la fuente se reemplaza directamente sin soltar el elemento. (Cuando eres tú quien elige la canción, se sigue limpiando como antes: ahí hay un toque tuyo de por medio y no hay riesgo.)
-
-2. **Se esperaba a `canplay` para llamar a `play()`.** Cuando ese evento llegaba, el permiso ya se había perdido. Ahora `play()` se llama en el mismo instante en que termina la anterior; los eventos siguen ahí para la cadena de respaldo.
-
-Además hay una red de seguridad: si `ended` no llega (algunas fuentes de Drive no lo disparan), el final se detecta por la posición o por una pausa a menos de un segundo del final.
 
 ## Pendiente / ideas
 
