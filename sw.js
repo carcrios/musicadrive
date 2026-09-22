@@ -1,7 +1,7 @@
 /* Service worker: solo para que la app se instale y abra sin conexion.
    El audio NO pasa por aqui: el navegador se lo pide a Google directamente. */
 
-const CACHE = 'mi-musica-2.6.2';
+const CACHE = 'mi-musica-2.6.3';
 const BASE = new URL('./', self.location).pathname;
 const CONCHA = [BASE, BASE + 'index.html', BASE + 'app.js', BASE + 'config.js',
                 BASE + 'manifest.webmanifest', BASE + 'icon-192.png', BASE + 'icon-512.png'];
