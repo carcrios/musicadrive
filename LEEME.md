@@ -13,7 +13,3 @@ La reproducción no hace consultas ID3 al iniciar una canción ni precarga metad
 Haz una recarga fuerte (`Ctrl + Shift + R`). Si el navegador conserva la versión anterior, usa **F12 → Application → Storage → Clear site data**.
 
 No cambies `app.js` mientras se prueba esta versión. Primero validemos la reproducción de varias canciones; las mejoras visuales se deben hacer después y de forma aislada.
-
-
-## v2.6.4.3
-Actualiza la caché de la biblioteca para volver a consultar los metadatos de Drive (`webContentLink`/`resourceKey`) y declara la sesión de audio como `playback` cuando el navegador lo permite. La reproducción existente no fue reescrita.

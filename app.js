@@ -12,17 +12,25 @@ var API = window.DRIVE_API || 'https://www.googleapis.com/drive/v3';
 var CARPETA_MIME = 'application/vnd.google-apps.folder';
 var EXT = /\.(mp3|m4a|aac|ogg|oga|opus|wav|flac|webm)$/i;
 
-var LL = { clave: 'mus_clave', carpeta: 'mus_carpeta', lista: 'mus_lista_v5',
+var LL = { clave: 'mus_clave', carpeta: 'mus_carpeta', lista: 'mus_lista_v6',
            sesion: 'mus_sesion', tags: 'mus_tags', fav: 'mus_favoritos' };
 var favoritos = leer(LL.fav, {});
 
 var audio = $('au');
-try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) {}
 var clave = '', carpeta = '';
 var cn = [], or = [], pos = -1, fc = '', alea = false, rep = 'no';
 var vis = [], dib = 0, PAG = 150, arrastre = false, pendiente = 0, deberia = false;
 var tags = {}, instalador = null, playToken = 0, audioObjectUrl = '';
 var cargaAudioToken = 0;
+
+/* iPhone/iPad: en la PWA instalada, el enlace de descarga de Drive
+   (webContentLink) suele ser una fuente multimedia más compatible que
+   el endpoint de la API. En PC mantenemos exactamente el orden estable
+   de la v2.6.4. */
+var ES_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) {}
 
 /* ================= utilidades ================= */
 function fmt(s) {
@@ -540,8 +548,13 @@ function tocar(p) {
   actualizarFavoritosUI();
   actualizarFull();
 
-  var fuentes = [{ modo: 'media', url: urlMedia(s) }];
-  if (urlWeb(s)) fuentes.push({ modo: 'web', url: urlWeb(s) });
+  var fuentes;
+  if (ES_IOS && urlWeb(s)) {
+    fuentes = [{ modo: 'web', url: urlWeb(s) }, { modo: 'media', url: urlMedia(s) }];
+  } else {
+    fuentes = [{ modo: 'media', url: urlMedia(s) }];
+    if (urlWeb(s)) fuentes.push({ modo: 'web', url: urlWeb(s) });
+  }
   reproducirFuente(s, token, fuentes, 0);
 }
 
