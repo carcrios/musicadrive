@@ -637,6 +637,56 @@ input[type=range]::-webkit-slider-thumb{
 }
 </style>
 
+
+<style id="y2k-fullscreen-deluxe">
+/* ===== Fullscreen MP3/CD deck — visual only. Does not alter player logic. ===== */
+#playerFull{
+  background:
+    radial-gradient(70vw 36vw at 50% 2%,rgba(101,247,255,.18),transparent 62%),
+    radial-gradient(40vw 26vw at 92% 18%,rgba(255,93,204,.14),transparent 64%),
+    radial-gradient(45vw 28vw at 6% 80%,rgba(191,255,74,.07),transparent 66%),
+    linear-gradient(180deg,#08111f 0%,#050912 68%,#03060d 100%);
+  overflow:auto;
+  overscroll-behavior:contain;
+}
+#playerFull::after{
+  content:"";position:absolute;inset:0;pointer-events:none;opacity:.23;
+  background:repeating-linear-gradient(0deg,rgba(255,255,255,.03) 0 1px,transparent 1px 4px);
+  mix-blend-mode:screen;
+}
+.pf-top{position:relative;z-index:2;max-width:920px;width:100%;margin:0 auto 8px;padding:4px 2px 0;display:flex;justify-content:space-between;align-items:center}
+.pf-brand{display:flex;align-items:center;gap:8px;font:900 10px/1 "Courier New",monospace;letter-spacing:1.6px;color:#c8f8ff;text-shadow:0 0 12px rgba(101,247,255,.2)}
+.pf-brand small{color:#6f8da8;font-size:8px;letter-spacing:1.4px;margin-left:3px}
+.pf-led{width:7px;height:7px;border-radius:50%;background:#bfff4a;box-shadow:0 0 8px rgba(191,255,74,.8)}
+.pf-shell{position:relative;z-index:1;width:min(94vw,940px);margin:0 auto 10px;padding:12px 12px 10px;border:1px solid rgba(188,232,255,.20);border-radius:18px;background:linear-gradient(180deg,rgba(33,54,83,.42),rgba(8,14,26,.88));box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 28px 80px rgba(0,0,0,.48),0 0 0 1px rgba(101,247,255,.04)}
+.pf-statusline{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:5px 7px 9px;color:#7892aa;font:700 8px/1 "Courier New",monospace;letter-spacing:1.3px;border-bottom:1px solid rgba(188,232,255,.12)}
+.pf-stereo{display:flex;align-items:flex-end;gap:2px}.pf-stereo i{width:3px;height:7px;background:linear-gradient(180deg,var(--y-pink),var(--y-cyan));box-shadow:0 0 6px rgba(101,247,255,.35)}.pf-stereo i:nth-child(2){height:11px}.pf-stereo b{font-size:8px;color:#b9e9f6;margin-left:4px}
+.pf-deck{position:relative;margin:12px auto 10px;max-width:720px;padding:18px 18px 15px;border-radius:17px;border:1px solid rgba(214,245,255,.20);background:linear-gradient(145deg,rgba(214,232,244,.13),rgba(24,37,56,.35) 32%,rgba(4,8,15,.6) 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.20),inset 0 -14px 24px rgba(0,0,0,.18),0 18px 44px rgba(0,0,0,.3)}
+.pf-screw{position:absolute;width:7px;height:7px;border-radius:50%;background:radial-gradient(circle at 30% 25%,#fff 0 8%,#91a3b3 9% 42%,#3a4a5a 45% 70%,#121a24 71%);box-shadow:0 1px 2px rgba(0,0,0,.5)}
+.pf-screw-a{top:8px;left:9px}.pf-screw-b{top:8px;right:9px}.pf-screw-c{bottom:8px;left:9px}.pf-screw-d{bottom:8px;right:9px}
+.pf-art-wrap{display:grid;place-items:center;position:relative;width:min(62vw,340px);aspect-ratio:1;margin:0 auto 11px}
+.pf-art{width:100%;height:100%;margin:0;border-radius:50%;background:conic-gradient(from 18deg,#f3ffff,#76899a 13%,#d8e9f1 22%,#4f6478 34%,#f3c4e8 46%,#5d7187 58%,#8ce9f7 71%,#52677b 83%,#f3ffff);border:2px solid rgba(255,255,255,.75);box-shadow:inset 0 0 0 2px rgba(0,0,0,.16),inset 0 0 28px rgba(255,255,255,.18),0 18px 44px rgba(0,0,0,.35),0 0 0 6px rgba(101,247,255,.05)}
+.pf-art::before{content:"";position:absolute;inset:4%;border-radius:50%;background:repeating-radial-gradient(circle at center,rgba(255,255,255,.05) 0 1px,transparent 1px 7px);opacity:.6}
+.pf-art::after{content:"";position:absolute;inset:9%;border-radius:50%;border:1px solid rgba(255,255,255,.34);box-shadow:inset 0 0 0 3px rgba(0,0,0,.12)}
+.pf-disc-ring{position:absolute;z-index:1;border-radius:50%;border:1px solid rgba(255,255,255,.18);box-shadow:0 0 10px rgba(101,247,255,.06)}
+.pf-disc-ring.r1{inset:14%}.pf-disc-ring.r2{inset:27%}.pf-disc-ring.r3{inset:39%}
+.pf-disc-hole{position:absolute;z-index:3;width:16%;height:16%;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff 0 7%,#c8d6df 8% 38%,#34485b 39% 72%,#101724 73%);border:1px solid rgba(255,255,255,.54);box-shadow:0 0 0 5px rgba(255,255,255,.05)}
+.pf-art svg{z-index:4;color:#ebfcff;filter:drop-shadow(0 0 10px rgba(101,247,255,.55))}
+.pf-disc-shine{position:absolute;inset:0;border-radius:50%;z-index:5;background:linear-gradient(125deg,rgba(255,255,255,.44),transparent 15% 40%,rgba(255,255,255,.10) 52%,transparent 68%);mix-blend-mode:screen;pointer-events:none}
+.pf-reflection{position:absolute;left:6%;right:6%;top:4%;height:15%;border-radius:50%;background:linear-gradient(180deg,rgba(255,255,255,.22),transparent);filter:blur(4px);opacity:.35}
+.pf-meter{display:flex;align-items:center;justify-content:center;gap:9px;font:900 8px/1 "Courier New",monospace;letter-spacing:1.4px;color:#7f9ab2}.pf-meter-bar{display:flex;align-items:flex-end;gap:2px;height:13px;padding:1px 4px;border-radius:4px;border:1px solid rgba(101,247,255,.18);background:rgba(0,0,0,.28);box-shadow:inset 0 1px 5px rgba(0,0,0,.34)}.pf-meter-bar i{display:block;width:5px;height:3px;border-radius:1px;background:linear-gradient(180deg,var(--y-pink),var(--y-cyan));box-shadow:0 0 5px rgba(101,247,255,.22);animation:pfmeter .72s ease-in-out infinite}.pf-meter-bar i:nth-child(2){animation-delay:-.54s;height:6px}.pf-meter-bar i:nth-child(3){animation-delay:-.21s;height:11px}.pf-meter-bar i:nth-child(4){animation-delay:-.38s;height:8px}.pf-meter-bar i:nth-child(5){animation-delay:-.15s;height:12px}.pf-meter-bar i:nth-child(6){animation-delay:-.62s;height:7px}.pf-meter-bar i:nth-child(7){animation-delay:-.28s;height:10px}.pf-meter-bar i:nth-child(8){animation-delay:-.47s;height:5px}.pf-meter-bar i:nth-child(9){animation-delay:-.34s;height:12px}.pf-meter-bar i:nth-child(10){animation-delay:-.10s;height:7px}.pf-meter-bar i:nth-child(11){animation-delay:-.40s;height:9px}.pf-meter-bar i:nth-child(12){animation-delay:-.24s;height:4px}
+@keyframes pfmeter{0%,100%{transform:scaleY(.6);filter:brightness(.85)}50%{transform:scaleY(1.08);filter:brightness(1.25)}}
+.pf-display{margin:0 auto 9px;max-width:720px;padding:11px 13px 9px;border-radius:10px;border:1px solid rgba(101,247,255,.20);background:linear-gradient(180deg,rgba(7,18,30,.96),rgba(2,8,15,.98));box-shadow:inset 0 0 16px rgba(0,0,0,.45),0 8px 20px rgba(0,0,0,.18)}
+.pf-display-head,.pf-subdisplay{display:flex;justify-content:space-between;gap:8px;font:700 8px/1.2 "Courier New",monospace;letter-spacing:1.3px;color:#6f8ea9}.pf-display-head{padding-bottom:7px;border-bottom:1px solid rgba(101,247,255,.10)}.pf-code{color:#bfff4a}.pf-title{text-align:center;margin:10px 0 7px}.pf-title b{display:block;color:#eaffff;text-shadow:0 0 15px rgba(101,247,255,.16);font-size:clamp(18px,3.3vw,28px)}.pf-title span{display:block;margin-top:4px;color:#91aac2;font:12px/1.2 "Courier New",monospace}.pf-subdisplay{padding-top:5px;color:#748ca3}.pf-subdisplay span:first-child{color:#bfff4a}
+.pf-controls{max-width:720px;margin:0 auto}.pf-controls .ba{margin-top:8px}.pf-controls .ba .env{height:20px}.pf-controls #pbf{background:linear-gradient(90deg,var(--y-cyan),var(--y-pink));box-shadow:0 0 12px rgba(101,247,255,.28)}.pf-buttons{display:flex;justify-content:center;align-items:center;gap:8px;margin-top:10px}.pf-buttons .ico{width:50px;height:44px;border-radius:11px;background:linear-gradient(180deg,rgba(255,255,255,.16),rgba(255,255,255,.045));border:1px solid rgba(214,241,255,.18);box-shadow:inset 0 1px 0 rgba(255,255,255,.16),0 8px 18px rgba(0,0,0,.2);font-weight:900}.pf-buttons #pfplay{width:72px;height:60px;border-radius:18px;background:radial-gradient(circle at 34% 26%,#fff 0 8%,#d8f9ff 9% 34%,#97aab5 50%,#eef7f9 74%,#70828e 100%);color:#07111b;border-color:#fff;box-shadow:0 0 0 4px rgba(101,247,255,.09),0 14px 30px rgba(0,0,0,.32),inset 0 2px 2px rgba(255,255,255,.75)}
+.pf-footerrow{display:flex;justify-content:space-between;gap:8px;max-width:720px;margin:11px auto 0;padding-top:8px;border-top:1px dashed rgba(101,247,255,.12);font:700 7px/1 "Courier New",monospace;letter-spacing:1.4px;color:#627a92}
+@media(max-width:650px){
+  #playerFull{padding-left:10px;padding-right:10px}
+  .pf-top{margin-bottom:3px}.pf-shell{width:100%;padding:9px 8px 8px;border-radius:15px}.pf-statusline{font-size:7px;letter-spacing:1px;padding:4px 4px 8px}.pf-deck{padding:13px 11px 11px;margin-top:9px}.pf-art-wrap{width:min(68vw,300px);margin-bottom:9px}.pf-meter{font-size:7px;gap:6px}.pf-meter-bar{gap:1px}.pf-meter-bar i{width:4px}.pf-display{padding:9px 9px 8px}.pf-title{margin:8px 0 6px}.pf-title b{font-size:18px}.pf-title span{font-size:10px}.pf-subdisplay{font-size:7px}.pf-buttons{gap:5px}.pf-buttons .ico{width:43px;height:41px;border-radius:10px;font-size:11px}.pf-buttons #pfplay{width:62px;height:54px}.pf-footerrow{font-size:6px;letter-spacing:1px}
+}
+@media(prefers-reduced-motion:reduce){.pf-meter-bar i{animation:none!important;transform:scaleY(.8)!important}}
+</style>
+
 </head>
 <body>
 
@@ -716,10 +766,38 @@ input[type=range]::-webkit-slider-thumb{
 </footer>
 
 <div id="playerFull">
-  <div class="pf-top"><span>REPRODUCIENDO</span><button class="closefull" id="closefull">×</button></div>
-  <div class="pf-art"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 3v10.55A4 4 0 1 0 14 17V7h4V3h-6z"/></svg></div>
-  <div class="pf-title"><b id="pfti">Elige una canción</b><span id="pfes"></span></div>
-  <div class="pf-controls"><div class="ba"><span class="tm" id="pft1">0:00</span><span class="env"><i id="pbf"></i><input id="pfpr" type="range" min="0" max="1000" value="0" aria-label="Posición"></span><span class="tm der" id="pft2">0:00</span></div><div class="pf-buttons"><button class="ico" id="pfan">◀</button><button class="ico" id="pfm10">−10</button><button class="ico" id="pfplay">▶</button><button class="ico" id="pfd10">+10</button><button class="ico" id="pfsi">▶</button></div></div>
+  <div class="pf-top">
+    <div class="pf-brand"><span class="pf-led"></span><span>Y2K DIGITAL AUDIO</span><small>PORTABLE MUSIC DECK</small></div>
+    <button class="closefull" id="closefull" aria-label="Cerrar">×</button>
+  </div>
+
+  <div class="pf-shell">
+    <div class="pf-statusline"><span>PLAY MODE: DIGITAL</span><span class="pf-stereo"><i></i><i></i><b>STEREO</b></span><span>MP3 / DRIVE</span></div>
+
+    <div class="pf-deck">
+      <div class="pf-screw pf-screw-a"></div><div class="pf-screw pf-screw-b"></div><div class="pf-screw pf-screw-c"></div><div class="pf-screw pf-screw-d"></div>
+      <div class="pf-art-wrap">
+        <div class="pf-art"><span class="pf-disc-shine"></span><span class="pf-disc-ring r1"></span><span class="pf-disc-ring r2"></span><span class="pf-disc-ring r3"></span><div class="pf-disc-hole"></div><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 3v10.55A4 4 0 1 0 14 17V7h4V3h-6z"/></svg></div>
+        <span class="pf-reflection"></span>
+      </div>
+      <div class="pf-meter">
+        <span>PLAY</span><span class="pf-meter-bar"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span><span>ACTIVE</span>
+      </div>
+    </div>
+
+    <div class="pf-display">
+      <div class="pf-display-head"><span>NOW PLAYING</span><span class="pf-code">01 / 99</span></div>
+      <div class="pf-title"><b id="pfti">Elige una canción</b><span id="pfes"></span></div>
+      <div class="pf-subdisplay"><span>● DIGITAL</span><span>44.1kHz</span><span>STEREO</span></div>
+    </div>
+
+    <div class="pf-controls">
+      <div class="ba"><span class="tm" id="pft1">0:00</span><span class="env"><i id="pbf"></i><input id="pfpr" type="range" min="0" max="1000" value="0" aria-label="Posición"></span><span class="tm der" id="pft2">0:00</span></div>
+      <div class="pf-buttons"><button class="ico" id="pfan" aria-label="Anterior">◀</button><button class="ico" id="pfm10" aria-label="Retroceder 10 segundos">−10</button><button class="ico" id="pfplay" aria-label="Reproducir / Pausa">▶</button><button class="ico" id="pfd10" aria-label="Adelantar 10 segundos">+10</button><button class="ico" id="pfsi" aria-label="Siguiente">▶</button></div>
+    </div>
+
+    <div class="pf-footerrow"><span>Mi Música // Y2K PLAYER</span><span>READY FOR THE NEXT TRACK</span></div>
+  </div>
 </div>
 
 <script src="config.js"></script>
