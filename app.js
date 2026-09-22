@@ -603,45 +603,32 @@ function posicion() {
 
 function activarMediaHandlers() {
   if (!('mediaSession' in navigator)) return;
-  var mh = function (a, f) {
-    try { navigator.mediaSession.setActionHandler(a, f); return true; }
-    catch (e) { return false; }
-  };
-
-  // Mantener TODOS los controles registrados. Safari/iOS decide cuales
-  // muestra en la pantalla bloqueada, pero eliminar acciones por dispositivo
-  // puede provocar que se pierdan los controles de avance/retroceso.
+  var mh = function (a, f) { try { navigator.mediaSession.setActionHandler(a, f); return true; } catch (e) { return false; } };
   mh('play', function () {
     deberia = true;
     var p = audio.play();
     if (p && p.catch) p.catch(function () {});
   });
-
-  mh('pause', function () {
-    deberia = false;
-    audio.pause();
-  });
-
+  mh('pause', function () { deberia = false; audio.pause(); });
   mh('nexttrack', function () { sig(false); });
   mh('previoustrack', ant);
 
+  // Estos dos manejadores son los que permiten que los controles del sistema
+  // puedan mostrar/usar avance y retroceso cuando el navegador los expone
+  // en la pantalla bloqueada, AirPods, Centro de control u otros controles.
   mh('seekbackward', function (d) {
     var segundos = Number(d && d.seekOffset);
     if (!isFinite(segundos) || segundos <= 0) segundos = SALTO_BLOQUEO;
     salto(-segundos);
   });
-
   mh('seekforward', function (d) {
     var segundos = Number(d && d.seekOffset);
     if (!isFinite(segundos) || segundos <= 0) segundos = SALTO_BLOQUEO;
     salto(segundos);
   });
-
   mh('seekto', function (d) {
-    if (!d || !isFinite(audio.duration) || audio.duration <= 0) return;
-    var destino = Number(d.seekTime);
-    if (!isFinite(destino)) return;
-    destino = Math.max(0, Math.min(audio.duration, destino));
+    if (!isFinite(audio.duration) || !d || !isFinite(d.seekTime)) return;
+    var destino = Math.max(0, Math.min(audio.duration, d.seekTime));
     try {
       if (d.fastSeek && typeof audio.fastSeek === 'function') audio.fastSeek(destino);
       else audio.currentTime = destino;
@@ -651,11 +638,7 @@ function activarMediaHandlers() {
     posicion();
     actualizarFull();
   });
-
-  mh('stop', function () {
-    deberia = false;
-    audio.pause();
-  });
+  mh('stop', function () { deberia = false; audio.pause(); });
 }
 function guardarSesion() {
   var a = act();
@@ -821,10 +804,6 @@ audio.addEventListener('timeupdate', function () {
   posicion();
   var n = Date.now();
   if (n - ultimo > 5000) { ultimo = n; guardarSesion(); }
-});
-audio.addEventListener('seeked', function () {
-  posicion();
-  actualizarFull();
 });
 audio.addEventListener('loadedmetadata', function () {
   activarMediaHandlers();
