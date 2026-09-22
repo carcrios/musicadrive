@@ -22,6 +22,9 @@ var cn = [], or = [], pos = -1, fc = '', alea = false, rep = 'no';
 var vis = [], dib = 0, PAG = 150, arrastre = false, pendiente = 0, deberia = false;
 var tags = {}, instalador = null, playToken = 0, audioObjectUrl = '';
 var cargaAudioToken = 0;
+var avanceAuto = false;   // true mientras se pasa de cancion sola (no lo pidio el usuario)
+var finDisparado = false; // para no pasar dos veces de cancion
+var revocarLuego = '';    // blob de la cancion anterior, se suelta cuando ya suena la nueva
 var SALTO_BLOQUEO = 10; // segundos usados por los controles de avance/retroceso de la pantalla bloqueada
 
 /* ================= utilidades ================= */
@@ -489,7 +492,15 @@ function reproducirFuente(s, token, urls, idx) {
   audio.addEventListener('loadedmetadata', meta);
   audio.addEventListener('error', fallo);
   audio.src = url;
-  audio.load();
+  if (!avanceAuto) audio.load();
+
+  // Arranque inmediato. Esperar a 'canplay' para llamar a play() es lo que
+  // rompe el avance automatico en iPhone: cuando el evento llega, el sistema
+  // ya retiro el permiso de audio. Llamarlo aqui, en el mismo instante en que
+  // termino la cancion anterior, conserva ese permiso.
+  // Si falla, los eventos 'canplay' y 'error' siguen haciendo su trabajo.
+  var prYa = audio.play();
+  if (prYa && prYa['catch']) prYa['catch'](function () {});
 
   // Si Drive tarda demasiado o no dispara eventos multimedia, probamos la siguiente fuente.
   sourceTimer = setTimeout(function () {
@@ -532,10 +543,21 @@ function tocar(p) {
   var token = ++sourceToken;
   sourceTimer && clearTimeout(sourceTimer);
   sourceTimer = null;
-  audio.pause();
-  liberarAudioBlob();
-  audio.removeAttribute('src');
-  audio.load();
+  finDisparado = false;
+
+  if (avanceAuto) {
+    // En iPhone, pausar y vaciar el elemento con la pantalla bloqueada hace que
+    // iOS retire el permiso de audio, y entonces la cancion siguiente ya no
+    // puede arrancar sola. En el cambio automatico se reemplaza la fuente
+    // directamente, sin soltar el elemento.
+    revocarLuego = audioObjectUrl;   // el blob viejo se suelta cuando ya suene la nueva
+    audioObjectUrl = '';
+  } else {
+    audio.pause();
+    liberarAudioBlob();
+    audio.removeAttribute('src');
+    audio.load();
+  }
   mediaInfo(s);
   actualizarFavoritosUI();
   actualizarFull();
@@ -613,19 +635,30 @@ function activarMediaHandlers() {
   mh('nexttrack', function () { sig(false); });
   mh('previoustrack', ant);
 
-  // Estos dos manejadores son los que permiten que los controles del sistema
-  // puedan mostrar/usar avance y retroceso cuando el navegador los expone
-  // en la pantalla bloqueada, AirPods, Centro de control u otros controles.
-  mh('seekbackward', function (d) {
-    var segundos = Number(d && d.seekOffset);
-    if (!isFinite(segundos) || segundos <= 0) segundos = SALTO_BLOQUEO;
-    salto(-segundos);
-  });
-  mh('seekforward', function (d) {
-    var segundos = Number(d && d.seekOffset);
-    if (!isFinite(segundos) || segundos <= 0) segundos = SALTO_BLOQUEO;
-    salto(segundos);
-  });
+  // Los controles del sistema tienen solo DOS ranuras a los lados del play.
+  // Si se declaran seekbackward/seekforward, iOS las ocupa con los saltos de
+  // 10 s y esconde los botones de cancion anterior y siguiente.
+  // Fuera de iOS caben las dos cosas, asi que alli si se declaran.
+  var esIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+              (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+  if (!esIOS) {
+    mh('seekbackward', function (d) {
+      var segundos = Number(d && d.seekOffset);
+      if (!isFinite(segundos) || segundos <= 0) segundos = SALTO_BLOQUEO;
+      salto(-segundos);
+    });
+    mh('seekforward', function (d) {
+      var segundos = Number(d && d.seekOffset);
+      if (!isFinite(segundos) || segundos <= 0) segundos = SALTO_BLOQUEO;
+      salto(segundos);
+    });
+  } else {
+    // En iOS se retiran explicitamente: si quedaron puestos de una version
+    // anterior, el sistema seguiria mostrando los saltos.
+    mh('seekbackward', null);
+    mh('seekforward', null);
+  }
   mh('seekto', function (d) {
     if (!isFinite(audio.duration) || !d || !isFinite(d.seekTime)) return;
     var destino = Math.max(0, Math.min(audio.duration, d.seekTime));
@@ -813,8 +846,30 @@ audio.addEventListener('loadedmetadata', function () {
   actualizarFull();
 });
 audio.addEventListener('playing', function () { var a = act(); est(a ? (a.c || '') : ''); });
-audio.addEventListener('ended', function () { sig(true); });
+function terminoLaPista() {
+  if (finDisparado) return;
+  finDisparado = true;
+  avanceAuto = true;
+  try { sig(true); } finally { avanceAuto = false; }
+}
+audio.addEventListener('ended', terminoLaPista);
+
+// Algunas fuentes de Drive no disparan 'ended': se detecta el final por la posicion.
+audio.addEventListener('timeupdate', function () {
+  if (!isFinite(audio.duration) || audio.duration <= 0) return;
+  if (audio.currentTime > 0 && audio.duration - audio.currentTime <= 0.35) terminoLaPista();
+});
+
+// Y si el sistema pausa justo al final, tambien cuenta como terminada.
+audio.addEventListener('pause', function () {
+  if (!isFinite(audio.duration) || audio.duration <= 0) return;
+  if (audio.duration - audio.currentTime <= 1) terminoLaPista();
+});
 audio.addEventListener('play', function () {
+  if (revocarLuego) {                 // ya suena la nueva: se puede soltar la anterior
+    try { URL.revokeObjectURL(revocarLuego); } catch (e) {}
+    revocarLuego = '';
+  }
   activarMediaHandlers();
   deberia = true;
   $('i1').style.display = 'none'; $('i2').style.display = '';

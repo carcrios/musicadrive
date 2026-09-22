@@ -31,6 +31,34 @@ footer{position:relative;border-top:1px solid var(--line);background:rgba(17,21,
 
 <div id="av"></div>
 
+<script>
+// Si el JavaScript falla, se ve en pantalla en vez de que la app quede muda.
+window.onerror = function (m, f, l) {
+  var a = document.getElementById('av');
+  if (!a) return false;
+  a.style.display = 'block';
+  a.innerHTML = '<b>Error de JavaScript</b><br>' + m +
+    '<br><small>' + String(f || '').split('/').pop() + ' linea ' + l + '</small>';
+  return false;
+};
+// Reinicio de emergencia: abrir la direccion con  ?reset=1  al final.
+if (location.search.indexOf('reset=1') >= 0) {
+  document.addEventListener('DOMContentLoaded', function () {
+    var t = [];
+    try { localStorage.clear(); } catch (e) {}
+    if (window.caches && caches.keys) t.push(caches.keys().then(function (k) {
+      return Promise.all(k.map(function (n) { return caches.delete(n); })); }));
+    if (navigator.serviceWorker && navigator.serviceWorker.getRegistrations)
+      t.push(navigator.serviceWorker.getRegistrations().then(function (rs) {
+        return Promise.all(rs.map(function (r) { return r.unregister(); })); }));
+    Promise.all(t).catch(function () {}).then(function () {
+      location.replace(location.pathname);
+    });
+  });
+}
+</script>
+
+
 <!-- ================= pantalla de inicio ================= -->
 <div id="ini">
   <div class="caja">

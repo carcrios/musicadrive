@@ -1,7 +1,11 @@
-/* Service worker: solo para que la app se instale y abra sin conexion.
-   El audio NO pasa por aqui: el navegador se lo pide a Google directamente. */
+/* Service worker: la app se instala y abre sin conexion.
+   El audio NO pasa por aqui: el navegador se lo pide a Google directamente.
 
-const CACHE = 'mi-musica-2.6.5';
+   Para el codigo de la app se pide PRIMERO a la red y la copia guardada es
+   el respaldo. Asi una version nueva entra sola al recargar, sin tener que
+   hacer Ctrl+Shift+R ni borrar los datos del sitio. */
+
+const CACHE = 'mi-musica-2.6.6';
 const BASE = new URL('./', self.location).pathname;
 const CONCHA = [BASE, BASE + 'index.html', BASE + 'app.js', BASE + 'config.js',
                 BASE + 'manifest.webmanifest', BASE + 'icon-192.png', BASE + 'icon-512.png'];
@@ -22,15 +26,28 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
   if (e.request.method !== 'GET' || url.origin !== self.location.origin) return;
-  if (!/\.(html|js|css|png|webmanifest)$/.test(url.pathname) && CONCHA.indexOf(url.pathname) < 0) return;
+
+  const esCodigo = /\.(html|js|webmanifest)$/.test(url.pathname) || url.pathname === BASE;
+  const esImagen = /\.(png|ico|svg|css)$/.test(url.pathname);
+  if (!esCodigo && !esImagen) return;
+
+  if (esCodigo) {
+    e.respondWith(
+      fetch(e.request).then(r => {
+        if (r && r.ok) {
+          const copia = r.clone();
+          caches.open(CACHE).then(c => c.put(e.request, copia));
+        }
+        return r;
+      }).catch(() => caches.match(e.request).then(hit => hit || Response.error()))
+    );
+    return;
+  }
 
   e.respondWith(
-    caches.match(e.request).then(hit => {
-      const red = fetch(e.request).then(r => {
-        if (r && r.ok) { const copia = r.clone(); caches.open(CACHE).then(c => c.put(e.request, copia)); }
-        return r;
-      }).catch(() => hit);
-      return hit || red;
-    })
+    caches.match(e.request).then(hit => hit || fetch(e.request).then(r => {
+      if (r && r.ok) { const copia = r.clone(); caches.open(CACHE).then(c => c.put(e.request, copia)); }
+      return r;
+    }))
   );
 });
