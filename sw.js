@@ -1,7 +1,7 @@
 /* Service worker: solo para que la app se instale y abra sin conexion.
    El audio NO pasa por aqui: el navegador se lo pide a Google directamente. */
 
-const CACHE = 'mi-musica-2.6.4';
+const CACHE = 'mi-musica-2.6.4.2-mobilefix';
 const BASE = new URL('./', self.location).pathname;
 const CONCHA = [BASE, BASE + 'index.html', BASE + 'app.js', BASE + 'config.js',
                 BASE + 'manifest.webmanifest', BASE + 'icon-192.png', BASE + 'icon-512.png'];
@@ -23,6 +23,19 @@ self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
   if (e.request.method !== 'GET' || url.origin !== self.location.origin) return;
   if (!/\.(html|js|css|png|webmanifest)$/.test(url.pathname) && CONCHA.indexOf(url.pathname) < 0) return;
+
+  // Network-first para HTML/JS/CSS: evita que una PWA instalada en iPhone
+  // se quede ejecutando una versión antigua después de una actualización.
+  const appShell = /\.(html|js|css)$/.test(url.pathname);
+  if (appShell) {
+    e.respondWith(
+      fetch(e.request).then(r => {
+        if (r && r.ok) { const copia = r.clone(); caches.open(CACHE).then(c => c.put(e.request, copia)); }
+        return r;
+      }).catch(() => caches.match(e.request))
+    );
+    return;
+  }
 
   e.respondWith(
     caches.match(e.request).then(hit => {

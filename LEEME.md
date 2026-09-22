@@ -13,3 +13,7 @@ La reproducción no hace consultas ID3 al iniciar una canción ni precarga metad
 Haz una recarga fuerte (`Ctrl + Shift + R`). Si el navegador conserva la versión anterior, usa **F12 → Application → Storage → Clear site data**.
 
 No cambies `app.js` mientras se prueba esta versión. Primero validemos la reproducción de varias canciones; las mejoras visuales se deben hacer después y de forma aislada.
+
+
+### v2.6.4.2 Mobile Fix
+Se actualizó el Service Worker para usar una nueva versión de caché y para priorizar la red en HTML/JS/CSS. Esto evita que una PWA instalada en iPhone continúe ejecutando una versión antigua del reproductor después de una actualización. El motor de reproducción no fue modificado.
