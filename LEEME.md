@@ -97,6 +97,6 @@ mi-musica/
 MIT. Puedes modificar y adaptar el proyecto. Si lo redistribuyes, conserva el aviso de licencia.
 
 
-## v2.6.1 — reproducción estable
+## v2.6.2 — reproducción estable
 
 Esta versión mantiene la reproducción mediante `fetch → Blob → ObjectURL → audio`, pero no solicita etiquetas ID3 mientras inicia una canción ni precarga los primeros 64 KB de la siguiente. También espera `canplay` antes de llamar a `play()` y hace un único reintento ante un fallo transitorio de descarga.

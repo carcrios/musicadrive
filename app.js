@@ -400,26 +400,73 @@ function liberarAudioBlob() {
   }
 }
 
-function obtenerAudio(s, token) {
-  var u = urlAudio(s);
-  return fetch(u, { cache: 'no-store' }).then(function (r) {
-    var ct = (r.headers.get('Content-Type') || '').toLowerCase();
-    if (!r.ok) {
-      return r.text().then(function (txt) {
-        var msg = '';
-        try { var j = JSON.parse(txt); msg = j.error && j.error.message || ''; } catch (e) {}
-        throw new Error('Google Drive respondió HTTP ' + r.status + (msg ? ': ' + msg : ''));
-      });
-    }
-    return r.blob().then(function (blob) {
-      // Si Drive devolvió JSON/HTML, no se trata de un archivo de audio.
-      if (ct && ct.indexOf('audio/') !== 0 && ct.indexOf('application/octet-stream') !== 0 && blob.type && blob.type.indexOf('audio/') !== 0) {
-        throw new Error('Drive devolvió ' + ct + ' en lugar de audio. Revisa permisos de descarga.');
-      }
-      if (token !== cargaAudioToken) throw new Error('Carga cancelada');
-      return blob;
+/*
+ * Reproducción estable desde Google Drive.
+ *
+ * No usamos fetch()+Blob para el audio: algunos enlaces de descarga de Drive
+ * pueden funcionar en <audio> pero bloquearse como fetch por CORS/redirecciones.
+ * Cuando Drive entrega webContentLink, ese enlace ya contiene la resource key
+ * necesaria para archivos compartidos mediante enlace. Si no existe, usamos
+ * files.get?alt=media como respaldo.
+ */
+function urlAudioDirecto(s) {
+  if (s && s.w) return s.w;
+  return urlAudio(s);
+}
+
+function iniciarAudioActual(s, token, fuente) {
+  if (token !== playToken || act() !== s) return;
+
+  var u = fuente === 'web' ? urlAudioDirecto(s) : urlAudio(s);
+  if (!u) {
+    est('No hay una fuente de audio disponible');
+    return;
+  }
+
+  // Evita que una fuente anterior pueda seguir disparando eventos.
+  audio.pause();
+  audio.removeAttribute('src');
+  audio.load();
+  audio.src = u;
+  audio.load();
+
+  var iniciado = false;
+  var comenzar = function () {
+    if (iniciado || token !== playToken || act() !== s) return;
+    iniciado = true;
+    var pr;
+    try { pr = audio.play(); } catch (e) { manejarErrorAudio(e); return; }
+    if (pr && pr.catch) pr.catch(function (e) {
+      if (token !== playToken || act() !== s) return;
+      manejarErrorAudio(e);
     });
-  });
+  };
+
+  var manejarErrorAudio = function (e) {
+    if (token !== playToken || act() !== s) return;
+    // Si webContentLink falla, probar una sola vez el endpoint de Drive.
+    if (fuente === 'web') {
+      est('Probando enlace alternativo…');
+      setTimeout(function () {
+        if (token === playToken && act() === s) iniciarAudioActual(s, token, 'api');
+      }, 120);
+      return;
+    }
+    var msg = e && e.message ? e.message : 'Fuente no compatible';
+    if (e && e.name === 'NotAllowedError') est('Toca ▶ para reproducir');
+    else if (e && e.name !== 'AbortError') est('No se pudo reproducir: ' + msg);
+  };
+
+  // Los errores de carga de <audio> son distintos de los errores de play().
+  var errorHandler = function () {
+    if (token !== playToken || act() !== s) return;
+    audio.removeEventListener('error', errorHandler);
+    manejarErrorAudio(new Error('No se pudo cargar la fuente de audio'));
+  };
+  audio.addEventListener('error', errorHandler, { once: true });
+
+  if (audio.readyState >= 3) comenzar();
+  else audio.addEventListener('canplay', comenzar, { once: true });
 }
 
 function tocar(p) {
@@ -433,49 +480,16 @@ function tocar(p) {
   pendiente = 0;
 
   var token = ++playToken;
-  var fetchToken = ++cargaAudioToken;
+  ++cargaAudioToken;
   liberarAudioBlob();
-  audio.pause();
-  audio.removeAttribute('src');
-  audio.load();
   mediaInfo(s);
   actualizarFavoritosUI();
   actualizarFull();
-  // Importante: no leer ID3 durante el inicio de la reproducción.
-  // La petición Range adicional a Google Drive puede interferir con la
-  // descarga principal y provocar que algunas pistas fallen.
 
-  obtenerAudio(s, fetchToken).then(function (blob) {
-    if (token !== playToken || fetchToken !== cargaAudioToken || act() !== s) return;
-    reintentosAudio = 0;
-    audioObjectUrl = URL.createObjectURL(blob);
-    audio.src = audioObjectUrl;
-    audio.load();
-    var iniciar = function () {
-      if (token !== playToken || fetchToken !== cargaAudioToken || act() !== s) return;
-      var pr = audio.play();
-      if (pr && pr.catch) pr.catch(function (e) {
-        if (token !== playToken || act() !== s) return;
-        if (e && e.name === 'NotAllowedError') est('Toca ▶ para reproducir');
-        else if (e && e.name !== 'AbortError') est('No se pudo reproducir: ' + (e.message || e));
-      });
-    };
-    if (audio.readyState >= 3) iniciar();
-    else audio.addEventListener('canplay', iniciar, { once: true });
-  })['catch'](function (e) {
-    if (token !== playToken || fetchToken !== cargaAudioToken || act() !== s) return;
-    if (e && e.message === 'Carga cancelada') return;
-    if (reintentosAudio < 1) {
-      reintentosAudio++;
-      est('Reintentando…');
-      setTimeout(function () {
-        if (token === playToken && act() === s) tocar(pos);
-      }, 350);
-      return;
-    }
-    reintentosAudio = 0;
-    est('No se pudo reproducir: ' + (e && e.message ? e.message : e));
-  });
+  // Primero usamos webContentLink cuando Drive lo proporciona. Google indica
+  // que estos enlaces ya incorporan la resource key del archivo compartido.
+  // No hacemos fetch() del audio para evitar problemas de CORS/redirección.
+  iniciarAudioActual(s, token, s.w ? 'web' : 'api');
 }
 function sig(auto) {
   if (!or.length) return;
