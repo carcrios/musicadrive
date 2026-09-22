@@ -603,51 +603,45 @@ function posicion() {
 
 function activarMediaHandlers() {
   if (!('mediaSession' in navigator)) return;
-  var mh = function (a, f) { try { navigator.mediaSession.setActionHandler(a, f); return true; } catch (e) { return false; } };
+  var mh = function (a, f) {
+    try { navigator.mediaSession.setActionHandler(a, f); return true; }
+    catch (e) { return false; }
+  };
+
+  // Mantener TODOS los controles registrados. Safari/iOS decide cuales
+  // muestra en la pantalla bloqueada, pero eliminar acciones por dispositivo
+  // puede provocar que se pierdan los controles de avance/retroceso.
   mh('play', function () {
     deberia = true;
     var p = audio.play();
     if (p && p.catch) p.catch(function () {});
   });
-  mh('pause', function () { deberia = false; audio.pause(); });
+
+  mh('pause', function () {
+    deberia = false;
+    audio.pause();
+  });
+
   mh('nexttrack', function () { sig(false); });
   mh('previoustrack', ant);
 
-  // En iPhone/iPad la pantalla bloqueada no siempre muestra a la vez
-  // anterior/siguiente y retroceder/adelantar. Como esta app necesita
-  // controles de +10/-10 en la pantalla bloqueada, damos prioridad a
-  // seekbackward/seekforward en iOS. En otros navegadores mantenemos
-  // tambien anterior/siguiente.
-  var esIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-              (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  mh('seekbackward', function (d) {
+    var segundos = Number(d && d.seekOffset);
+    if (!isFinite(segundos) || segundos <= 0) segundos = SALTO_BLOQUEO;
+    salto(-segundos);
+  });
 
-  function registrarSaltos() {
-    mh('seekbackward', function (d) {
-      var segundos = Number(d && d.seekOffset);
-      if (!isFinite(segundos) || segundos <= 0) segundos = SALTO_BLOQUEO;
-      salto(-segundos);
-    });
-    mh('seekforward', function (d) {
-      var segundos = Number(d && d.seekOffset);
-      if (!isFinite(segundos) || segundos <= 0) segundos = SALTO_BLOQUEO;
-      salto(segundos);
-    });
-  }
+  mh('seekforward', function (d) {
+    var segundos = Number(d && d.seekOffset);
+    if (!isFinite(segundos) || segundos <= 0) segundos = SALTO_BLOQUEO;
+    salto(segundos);
+  });
 
-  registrarSaltos();
-
-  // En iOS se priorizan los botones de adelantar/retroceder.
-  // En otros sistemas tambien ofrecemos anterior/siguiente.
-  if (!esIOS) {
-    mh('nexttrack', function () { sig(false); });
-    mh('previoustrack', ant);
-  } else {
-    mh('nexttrack', null);
-    mh('previoustrack', null);
-  }
   mh('seekto', function (d) {
-    if (!isFinite(audio.duration) || !d || !isFinite(d.seekTime)) return;
-    var destino = Math.max(0, Math.min(audio.duration, d.seekTime));
+    if (!d || !isFinite(audio.duration) || audio.duration <= 0) return;
+    var destino = Number(d.seekTime);
+    if (!isFinite(destino)) return;
+    destino = Math.max(0, Math.min(audio.duration, destino));
     try {
       if (d.fastSeek && typeof audio.fastSeek === 'function') audio.fastSeek(destino);
       else audio.currentTime = destino;
@@ -657,7 +651,11 @@ function activarMediaHandlers() {
     posicion();
     actualizarFull();
   });
-  mh('stop', function () { deberia = false; audio.pause(); });
+
+  mh('stop', function () {
+    deberia = false;
+    audio.pause();
+  });
 }
 function guardarSesion() {
   var a = act();
@@ -823,6 +821,10 @@ audio.addEventListener('timeupdate', function () {
   posicion();
   var n = Date.now();
   if (n - ultimo > 5000) { ultimo = n; guardarSesion(); }
+});
+audio.addEventListener('seeked', function () {
+  posicion();
+  actualizarFull();
 });
 audio.addEventListener('loadedmetadata', function () {
   activarMediaHandlers();
