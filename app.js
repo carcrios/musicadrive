@@ -12,7 +12,7 @@ var API = window.DRIVE_API || 'https://www.googleapis.com/drive/v3';
 var CARPETA_MIME = 'application/vnd.google-apps.folder';
 var EXT = /\.(mp3|m4a|aac|ogg|oga|opus|wav|flac|webm)$/i;
 
-var LL = { clave: 'mus_clave', carpeta: 'mus_carpeta', lista: 'mus_lista_v3',
+var LL = { clave: 'mus_clave', carpeta: 'mus_carpeta', lista: 'mus_lista_v4',
            sesion: 'mus_sesion', tags: 'mus_tags', fav: 'mus_favoritos' };
 var favoritos = leer(LL.fav, {});
 
@@ -20,7 +20,7 @@ var audio = $('au');
 var clave = '', carpeta = '';
 var cn = [], or = [], pos = -1, fc = '', alea = false, rep = 'no';
 var vis = [], dib = 0, PAG = 150, arrastre = false, pendiente = 0, deberia = false;
-var tags = {}, instalador = null;
+var tags = {}, instalador = null, playToken = 0;
 
 /* ================= utilidades ================= */
 function fmt(s) {
@@ -165,7 +165,7 @@ function comprimir(lista) {
   var p = lista.map(function (s) {
     if (iR[s.c] === undefined) { iR[s.c] = rutas.length; rutas.push(s.c); }
     if (iM[s.m] === undefined) { iM[s.m] = mimes.length; mimes.push(s.m); }
-    return [s.id, s.n, iR[s.c], iM[s.m], s.z];
+    return [s.id, s.n, iR[s.c], iM[s.m], s.z, s.w || '', s.rk || ''];
   });
   return { c: rutas, m: mimes, p: p, de: carpeta };
 }
@@ -173,7 +173,7 @@ function expandir(g) {
   var rutas = g.c || [], mimes = g.m || [];
   cn = (g.p || []).map(function (f) {
     var c = rutas[f[2]] || '';
-    return { id: f[0], n: f[1], c: c, m: mimes[f[3]] || 'audio/mpeg', z: f[4] || 0, k: norm(f[1] + ' ' + c) };
+    return { id: f[0], n: f[1], c: c, m: mimes[f[3]] || 'audio/mpeg', z: f[4] || 0, w: f[5] || '', rk: f[6] || '', k: norm(f[1] + ' ' + c) };
   });
 }
 
@@ -395,29 +395,35 @@ function tocar(p) {
   est('Cargando…');
   marcar();
   guardarSesion();
+  pendiente = 0;
 
-  // Cambiar la fuente y dejar que el navegador inicie la carga.
-  // Llamar a load() justo antes de play() puede provocar AbortError/"play() interrupted"
-  // en algunos navegadores cuando Google Drive responde con redirecciones.
+  // Cambiamos la fuente una sola vez. No hacemos load() ni pause() aquí.
+  // Esperamos canplay/loadedmetadata antes de llamar a play(), evitando
+  // carreras entre canciones y el error "play() interrupted by pause()".
   audio.src = urlAudio(s);
   mediaInfo(s);
   actualizarFavoritosUI();
   actualizarFull();
-  // Esperamos a que el elemento haya recibido la nueva fuente antes de reproducir.
-  // No llamamos a pause()/load() durante esta transición.
-  var pr = audio.play();
-  if (pr && pr['catch']) pr['catch'](function (e) {
-    // AbortError suele significar que la fuente cambió antes de completar play().
-    // No es un error de la canción y no debemos avanzar de pista.
-    if (e && (e.name === 'AbortError' || e.name === 'NotAllowedError')) {
-      if (e.name === 'NotAllowedError') est('Toca ▶ para reproducir');
-      return;
-    }
-    est('No se pudo reproducir: ' + (e && e.message ? e.message : e));
-  });
   buscarTags(s);
   if (pos + 1 < or.length) buscarTags(cn[or[pos + 1]]);
+
+  var token = ++playToken;
+  var iniciar = function () {
+    if (token !== playToken || act() !== s) return;
+    audio.removeEventListener('canplay', iniciar);
+    var pr = audio.play();
+    if (pr && pr.catch) pr.catch(function (e) {
+      if (token !== playToken || act() !== s) return;
+      if (e && e.name === 'NotAllowedError') { est('Toca ▶ para reproducir'); return; }
+      if (e && e.name === 'AbortError') return;
+      est('No se pudo reproducir: ' + (e && e.message ? e.message : e));
+    });
+  };
+  audio.addEventListener('canplay', iniciar);
+  // Fallback para navegadores que no disparen canplay después de una carga ya lista.
+  if (audio.readyState >= 3) iniciar();
 }
+
 function sig(auto) {
   if (!or.length) return;
   if (auto && rep === 'una') { audio.currentTime = 0; audio.play(); return; }
@@ -658,8 +664,15 @@ audio.addEventListener('error', function () {
     s._fallback = true;
     var fallback = API + '/files/' + encodeURIComponent(s.id) + '?alt=media&supportsAllDrives=true&key=' + encodeURIComponent(clave);
     audio.src = fallback;
-    var p = audio.play();
-    if (p && p['catch']) p['catch'](function () {});
+    var token = ++playToken;
+    var iniciarFallback = function () {
+      if (token !== playToken || act() !== s) return;
+      audio.removeEventListener('canplay', iniciarFallback);
+      var p = audio.play();
+      if (p && p.catch) p.catch(function () {});
+    };
+    audio.addEventListener('canplay', iniciarFallback);
+    if (audio.readyState >= 3) iniciarFallback();
     return;
   }
   if (code === 1) return;
