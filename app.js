@@ -7,7 +7,7 @@
    ========================================================= */
 'use strict';
 
-window.APP_VER = '3';   // debe coincidir con HTML_VER en index.html
+window.APP_VER = '4';   // debe coincidir con HTML_VER en index.html
 
 var $ = function (i) { return document.getElementById(i); };
 var API = window.DRIVE_API || 'https://www.googleapis.com/drive/v3';
@@ -371,26 +371,66 @@ function buscarTags(s) {
 }
 
 /* ================= reproduccion ================= */
+var genTocar = 0;      // cada cancion que se pide anula la anterior
+var relojCarga = null;
+
 function tocar(p) {
   if (p < 0 || p >= or.length) return;
   pos = p;
-  var s = act();
+  var s = act(), mio = ++genTocar;
   $('ti').textContent = titulo(s);
   est('Cargando…');
   marcar();
   guardarSesion();
 
+  clearTimeout(relojCarga);
+  // Si en 15 s no ha empezado a sonar, preguntarle a Google que pasa.
+  relojCarga = setTimeout(function () {
+    if (mio === genTocar && audio.paused) diagnosticar(s, null);
+  }, 15000);
+
+  // Asignar src ya inicia la carga; llamar a load() ademas aborta el play().
   audio.src = urlAudio(s);
-  audio.load();
   mediaInfo(s);
+
   var pr = audio.play();
   if (pr && pr['catch']) pr['catch'](function (e) {
-    if (e && e.name === 'NotAllowedError') est('Toca ▶ para reproducir');
-    else est('No se pudo reproducir: ' + (e.message || e));
+    if (mio !== genTocar) return;                       // el usuario ya eligio otra
+    var m = (e && e.message) || '';
+    // Estas dos NO son fallos: pasan al cambiar rapido de cancion.
+    if (e && (e.name === 'AbortError' || /interrupted by|interrupted because/i.test(m))) return;
+    if (e && e.name === 'NotAllowedError') { est('Toca ▶ para reproducir'); return; }
+    diagnosticar(s, e);
   });
+
   buscarTags(s);
   if (pos + 1 < or.length) buscarTags(cn[or[pos + 1]]);
 }
+
+/** Cuando el audio no arranca, se le pregunta a Google por el archivo
+ *  y se muestra SU respuesta, que es la que explica de verdad el problema. */
+function diagnosticar(s, e) {
+  est('Comprobando el archivo…');
+  fetch(urlAudio(s), { headers: { Range: 'bytes=0-1' } }).then(function (r) {
+    if (r.ok || r.status === 206) {
+      // Google entrega el archivo: el problema es del reproductor, no del acceso.
+      est(e ? ('No se pudo reproducir: ' + (e.message || e))
+            : 'El archivo llega pero el navegador no lo reproduce. ¿Formato no compatible?');
+      return;
+    }
+    if (r.status === 404) {                    // es ESTA cancion, no la carpeta
+      est('Esa canción ya no está en Drive. Pasando a la siguiente…');
+      setTimeout(function () { sig(true); }, 1200);
+      return;
+    }
+    return r.json()['catch'](function () { return null; }).then(function (j) {
+      est(mensajeError(r, j));
+    });
+  })['catch'](function () {
+    est('Sin conexión con Google. Revisa el internet.');
+  });
+}
+
 function sig(auto) {
   if (!or.length) return;
   if (auto && rep === 'una') { audio.currentTime = 0; audio.play(); return; }
@@ -555,7 +595,11 @@ audio.addEventListener('loadedmetadata', function () {
   if (pendiente > 0) { try { audio.currentTime = pendiente; } catch (e) {} pendiente = 0; }
   posicion();
 });
-audio.addEventListener('playing', function () { var a = act(); est(a ? (a.c || '') : ''); });
+audio.addEventListener('playing', function () {
+  clearTimeout(relojCarga);
+  var a = act();
+  est(a ? (a.c || '') : '');
+});
 audio.addEventListener('ended', function () { sig(true); });
 audio.addEventListener('play', function () {
   deberia = true;
@@ -570,8 +614,25 @@ audio.addEventListener('pause', function () {
 });
 audio.addEventListener('error', function () {
   if (!audio.src) return;
-  est('No se pudo leer esa canción. Pasando a la siguiente…');
-  setTimeout(function () { sig(true); }, 1500);
+  var s = act();
+  if (!s) return;
+  // Antes saltaba a la siguiente sin mirar: con un problema general eso
+  // recorria la biblioteca entera fallando. Ahora primero se averigua.
+  fetch(urlAudio(s), { headers: { Range: 'bytes=0-1' } }).then(function (r) {
+    if (r.status === 404) {                       // solo ese archivo: seguir
+      est('Esa canción ya no está en Drive. Pasando a la siguiente…');
+      setTimeout(function () { sig(true); }, 1200);
+      return;
+    }
+    if (r.ok || r.status === 206) {
+      est('El navegador no pudo reproducir este archivo (formato). Pasando a la siguiente…');
+      setTimeout(function () { sig(true); }, 1200);
+      return;
+    }
+    return r.json()['catch'](function () { return null; }).then(function (j) {
+      est(mensajeError(r, j));                    // problema general: parar y explicar
+    });
+  })['catch'](function () { est('Sin conexión con Google.'); });
 });
 window.addEventListener('beforeunload', guardarSesion);
 document.addEventListener('visibilitychange', function () {

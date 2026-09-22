@@ -123,7 +123,7 @@ input[type=range]{flex:1 1 auto;width:100%;accent-color:var(--ac);height:22px;mi
 
 <script>
 // Version de ESTE archivo. app.js declara la suya; si no coinciden, se avisa.
-var HTML_VER = '3';
+var HTML_VER = '4';
 var yaHuboError = false;
 
 function avisar(t) {
@@ -150,7 +150,7 @@ setTimeout(function () {
   var viva = !!document.querySelector('.pi') ||
              (ini && ini.className.indexOf('ver') >= 0);
 
-  var suya = window.APP_VER ? ('la v' + window.APP_VER) : 'una anterior a la v3';
+  var suya = window.APP_VER ? ('la v' + window.APP_VER) : 'una anterior a la v4';
 
   if (viva) {
     avisar('<b>app.js esta desactualizado.</b><br>La app funciona, pero index.html es la v' +
@@ -196,7 +196,7 @@ setTimeout(function () {
 
 <!-- ================= app ================= -->
 <header>
-  <h1>🎵 Mi Música <span class="se">v3</span></h1>
+  <h1>🎵 Mi Música <span class="se">v4</span></h1>
   <span id="ct"></span>
   <button class="bt oculto" id="bi">⬇ Instalar</button>
   <button class="bt" id="bc">📁<span class="txt"> Cambiar</span></button>
