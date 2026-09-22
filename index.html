@@ -687,6 +687,197 @@ input[type=range]::-webkit-slider-thumb{
 @media(prefers-reduced-motion:reduce){.pf-meter-bar i{animation:none!important;transform:scaleY(.8)!important}}
 </style>
 
+
+<style id="y2k-desktop-ux">
+/* ===== Desktop Y2K workstation layout · visual only ===== */
+@media (min-width: 651px){
+  /* Give the main app a real desktop canvas instead of a stretched phone UI. */
+  header{padding-left:clamp(22px,3vw,42px);padding-right:clamp(22px,3vw,42px)}
+  .fi{padding-left:clamp(22px,3vw,42px);padding-right:clamp(22px,3vw,42px)}
+  .fi input{flex-basis:420px}
+  .fi select{flex-basis:270px}
+  #ls{padding:16px clamp(14px,2.4vw,36px) 218px}
+  .sectionbar,.pi{max-width:1160px}
+  .pi{padding:12px 15px;border-radius:15px}
+  .cover{width:46px;height:46px}
+
+  /* Desktop mini-deck at the bottom: more breathing room and clearer hierarchy. */
+  footer{padding:13px clamp(22px,3vw,42px) calc(16px + env(safe-area-inset-bottom));}
+  footer::before{margin:-14px 0 12px}
+  .now{max-width:1180px;grid-template-columns:62px minmax(240px,1fr) auto;gap:14px;}
+  .nowcover{width:62px;height:62px;border-radius:15px}
+  .quick{gap:6px}
+  .quick .ico{width:42px;height:42px}
+  .ba{max-width:1180px;margin-top:10px;gap:11px}
+  .ba .tm{width:42px;font-size:11px}
+  .controls{gap:8px;margin-top:7px}
+  .controls .ico{width:42px;height:42px}
+  #pl{width:60px;height:60px;margin:0 7px}
+  .sa{width:52px;height:40px}
+  .vo{max-width:340px;margin-top:6px}
+  .vo input{width:190px}
+}
+
+/* Desktop full player: horizontal Y2K hardware deck. Mobile keeps the existing vertical deck. */
+@media (min-width: 900px){
+  #playerFull{
+    padding:clamp(22px,3vw,40px) clamp(22px,4vw,60px) 34px;
+    overflow:auto;
+    align-items:center;
+    justify-content:flex-start;
+  }
+  #playerFull::before{top:18px;font-size:10px;letter-spacing:2.6px}
+  .pf-top{max-width:1120px;margin:0 auto 12px;padding:0 4px;width:100%}
+  .pf-shell{
+    width:min(1120px,94vw);
+    max-width:1120px;
+    display:grid;
+    grid-template-columns:minmax(430px,1.1fr) minmax(360px,.9fr);
+    grid-template-areas:
+      "status status"
+      "deck display"
+      "deck controls"
+      "deck foot";
+    gap:12px 16px;
+    padding:16px;
+    margin:0 auto 14px;
+    border-radius:22px;
+    background:
+      linear-gradient(145deg,rgba(230,248,255,.12),rgba(28,45,68,.20) 36%,rgba(3,8,16,.94) 100%);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.18),0 32px 90px rgba(0,0,0,.52),0 0 0 1px rgba(101,247,255,.05);
+  }
+  .pf-statusline{grid-area:status;margin:0;padding:6px 10px 10px;font-size:9px}
+  .pf-deck{
+    grid-area:deck;
+    max-width:none;
+    margin:0;
+    min-height:560px;
+    padding:24px 24px 18px;
+    border-radius:20px;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.20),inset 0 -20px 30px rgba(0,0,0,.2),0 18px 44px rgba(0,0,0,.28);
+  }
+  .pf-art-wrap{width:min(34vw,390px);max-width:390px;margin:auto auto 18px}
+  .pf-meter{margin-top:4px}
+  .pf-display{
+    grid-area:display;
+    width:100%;
+    max-width:none;
+    align-self:end;
+    margin:0;
+    padding:17px 18px 14px;
+    border-radius:13px;
+  }
+  .pf-display-head{font-size:9px;padding-bottom:9px}
+  .pf-title{margin:18px 0 13px}
+  .pf-title b{font-size:clamp(22px,2.4vw,34px);line-height:1.05}
+  .pf-title span{font-size:13px;margin-top:7px}
+  .pf-subdisplay{font-size:9px;padding-top:8px}
+  .pf-controls{
+    grid-area:controls;
+    width:100%;
+    max-width:none;
+    align-self:start;
+    padding:6px 8px 10px;
+    border:1px solid rgba(101,247,255,.10);
+    border-radius:13px;
+    background:linear-gradient(180deg,rgba(3,11,20,.52),rgba(2,7,13,.18));
+  }
+  .pf-controls .ba{max-width:none;margin-top:4px}
+  .pf-buttons{gap:10px;margin-top:13px}
+  .pf-buttons .ico{width:54px;height:48px;border-radius:12px}
+  .pf-buttons #pfplay{width:78px;height:66px;border-radius:20px}
+  .pf-footerrow{grid-area:foot;max-width:none;width:100%;margin:0;padding:8px 4px 0;font-size:8px}
+
+  /* Give the PC a proper chrome/status edge without changing mobile. */
+  .pf-brand{font-size:11px}
+  .pf-brand small{font-size:9px}
+  .pf-led{width:8px;height:8px}
+}
+
+@media (min-width: 651px) and (max-width: 899px){
+  #playerFull{padding:20px 18px 26px}
+  .pf-top{max-width:760px}
+  .pf-shell{width:min(760px,95vw);padding:13px}
+  .pf-deck{max-width:620px}
+  .pf-art-wrap{width:min(54vw,360px)}
+}
+
+/* Very wide desktop: turn the library into a centered workstation panel. */
+@media (min-width: 1200px){
+  header{padding-top:15px;padding-bottom:12px}
+  .fi{padding-top:13px;padding-bottom:13px}
+  .pi{padding-left:17px;padding-right:17px}
+  .pi:hover{transform:translateY(-1px)}
+}
+</style>
+
+<style id="y2k-final-player">
+/* =========================================================
+   Y2K PLAYER DECK — visual layer only
+   Does not alter playback logic.
+   ========================================================= */
+#playerFull{
+  background:
+    radial-gradient(900px 520px at 50% 8%,rgba(73,235,255,.16),transparent 58%),
+    radial-gradient(700px 520px at 85% 72%,rgba(255,83,207,.10),transparent 60%),
+    linear-gradient(180deg,#070d18 0%,#050912 100%);
+  padding:calc(18px + env(safe-area-inset-top)) max(18px,env(safe-area-inset-right)) calc(18px + env(safe-area-inset-bottom)) max(18px,env(safe-area-inset-left));
+  overflow:auto;
+  color:#eefcff;
+}
+#playerFull::before{
+  content:"";position:fixed;inset:0;pointer-events:none;opacity:.28;
+  background:repeating-linear-gradient(0deg,rgba(255,255,255,.025) 0 1px,transparent 1px 4px);
+}
+.pf-top{width:min(1120px,100%);margin:0 auto 12px;position:relative;z-index:1;min-height:52px}
+.pf-brand{display:flex;align-items:center;gap:11px;font-family:"Trebuchet MS",sans-serif;font-weight:900;letter-spacing:2px;text-shadow:0 0 16px rgba(83,245,255,.35)}
+.pf-brand small{font-size:10px;color:#7c91a8;letter-spacing:2px;font-weight:700;margin-left:3px}
+.pf-led{width:11px;height:11px;border-radius:50%;background:#b7ff4a;box-shadow:0 0 9px #b7ff4a,0 0 20px rgba(183,255,74,.55);flex:none}
+.closefull{width:46px;height:46px;background:linear-gradient(145deg,#273447,#101927);border:1px solid rgba(174,225,255,.34);box-shadow:inset 0 1px 0 rgba(255,255,255,.2),0 8px 22px rgba(0,0,0,.3);font-size:22px;color:#eefcff}
+.pf-shell{width:min(1120px,100%);margin:auto;position:relative;z-index:1;border:1px solid rgba(151,220,255,.34);border-radius:28px;background:linear-gradient(145deg,rgba(28,43,63,.88),rgba(5,12,23,.92));box-shadow:0 28px 80px rgba(0,0,0,.52),inset 0 1px 0 rgba(255,255,255,.14);padding:18px}
+.pf-statusline{height:34px;display:flex;align-items:center;justify-content:space-between;color:#8198b0;font-family:monospace;font-size:11px;letter-spacing:2px;border-bottom:1px solid rgba(177,227,255,.15);margin-bottom:16px}
+.pf-stereo{display:flex;align-items:center;gap:4px;color:#e9fcff}.pf-stereo i{display:block;width:4px;height:15px;background:#ff62d1;box-shadow:0 0 10px #ff62d1}.pf-stereo i+ i{height:11px;background:#58efff;box-shadow:0 0 10px #58efff}.pf-stereo b{margin-left:5px;letter-spacing:1.5px}
+.pf-deck{position:relative;border:1px solid rgba(187,229,255,.27);border-radius:24px;background:linear-gradient(145deg,#26364b 0%,#0d1726 55%,#09101c 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.15),inset 0 -1px 0 rgba(0,0,0,.65),0 18px 40px rgba(0,0,0,.28);overflow:hidden}
+.pf-deck::after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(110deg,transparent 15%,rgba(255,255,255,.05) 30%,transparent 42%,transparent 65%,rgba(80,239,255,.04) 75%,transparent 86%)}
+.pf-screw{position:absolute;width:11px;height:11px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#f4ffff 0 18%,#8799aa 20% 48%,#344454 52%);box-shadow:0 1px 2px #000;z-index:3}.pf-screw-a{left:14px;top:14px}.pf-screw-b{right:14px;top:14px}.pf-screw-c{left:14px;bottom:14px}.pf-screw-d{right:14px;bottom:14px}
+.pf-art-wrap{display:grid;place-items:center;padding:26px 30px 8px}
+.pf-art{width:min(52vw,430px);max-width:430px;aspect-ratio:1;border-radius:50%;position:relative;overflow:hidden;background:radial-gradient(circle at 48% 42%,#f9ffff 0 4%,#9eabb6 6%,#dce8ed 14%,#7e8c97 26%,#dce9ee 38%,#81909d 52%,#eaf4f7 68%,#657482 84%,#e8f2f4 95%,#4c5c6c 100%);border:9px solid #cbd7de;box-shadow:0 0 0 3px #465463,0 0 0 7px #dce7ea,inset 0 0 40px rgba(0,0,0,.34),0 18px 45px rgba(0,0,0,.45);transform:translateZ(0)}
+.pf-art::before{content:"";position:absolute;inset:3%;border-radius:50%;background:repeating-radial-gradient(circle at 50% 50%,transparent 0 10px,rgba(255,255,255,.16) 11px 12px,transparent 13px 22px);opacity:.7}.pf-art::after{content:"";position:absolute;inset:-10%;background:linear-gradient(112deg,transparent 35%,rgba(255,255,255,.48) 44%,rgba(75,238,255,.18) 49%,rgba(255,101,216,.25) 57%,transparent 65%);transform:rotate(-10deg);mix-blend-mode:screen}
+.pf-disc-shine{position:absolute;inset:0;border-radius:50%;background:linear-gradient(115deg,transparent 20%,rgba(255,255,255,.55) 31%,transparent 38%,transparent 56%,rgba(255,255,255,.24) 63%,transparent 70%);z-index:2}.pf-disc-ring{position:absolute;border:1px solid rgba(255,255,255,.23);border-radius:50%;inset:16%}.pf-disc-ring.r2{inset:29%}.pf-disc-ring.r3{inset:42%}.pf-disc-hole{position:absolute;width:18%;aspect-ratio:1;left:41%;top:41%;border-radius:50%;background:radial-gradient(circle at 40% 35%,#fff,#82909c 48%,#2c3a48 52%,#080e17 100%);box-shadow:0 0 0 8px rgba(0,0,0,.12);z-index:4}.pf-art svg{position:absolute;width:19%;height:19%;left:40.5%;top:40.5%;z-index:5;color:rgba(255,255,255,.84);filter:drop-shadow(0 2px 2px rgba(0,0,0,.35))}
+.pf-reflection{position:absolute;left:20%;right:20%;top:8%;height:22%;border-radius:50%;background:linear-gradient(180deg,rgba(255,255,255,.32),transparent);filter:blur(4px);pointer-events:none}
+.pf-meter{height:34px;display:flex;justify-content:center;align-items:center;gap:9px;font:700 9px monospace;letter-spacing:2px;color:#71889e;padding-bottom:10px}.pf-meter-bar{display:flex;align-items:end;gap:3px;height:20px;padding:3px 5px;border-radius:6px;border:1px solid rgba(110,242,255,.28);background:#07101b;box-shadow:inset 0 2px 5px #000}.pf-meter-bar i{width:4px;height:6px;background:#56f5ff;box-shadow:0 0 5px #56f5ff}.pf-meter-bar i:nth-child(2){height:10px}.pf-meter-bar i:nth-child(3){height:15px;background:#b7ff4a}.pf-meter-bar i:nth-child(4){height:8px}.pf-meter-bar i:nth-child(5){height:17px;background:#ff65d0}.pf-meter-bar i:nth-child(6){height:12px}.pf-meter-bar i:nth-child(7){height:19px;background:#ff65d0}.pf-meter-bar i:nth-child(8){height:11px}.pf-meter-bar i:nth-child(9){height:16px;background:#b7ff4a}.pf-meter-bar i:nth-child(10){height:9px}.pf-meter-bar i:nth-child(11){height:14px}.pf-meter-bar i:nth-child(12){height:7px}
+.pf-display{margin-top:14px;border:1px solid rgba(75,238,255,.30);border-radius:18px;background:linear-gradient(180deg,rgba(2,13,22,.88),rgba(3,9,16,.94));box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 10px 25px rgba(0,0,0,.2);padding:15px 17px}.pf-display-head{display:flex;justify-content:space-between;color:#70879d;font:700 10px monospace;letter-spacing:2px;border-bottom:1px solid rgba(180,225,255,.13);padding-bottom:10px}.pf-code{color:#b7ff4a;text-shadow:0 0 10px rgba(183,255,74,.35)}.pf-title{margin:16px 0 10px;text-align:center}.pf-title b{font-family:"Trebuchet MS",sans-serif;font-size:clamp(20px,3vw,34px);font-weight:900;letter-spacing:-.6px;text-shadow:0 0 16px rgba(86,242,255,.16)}.pf-title span{display:block;margin-top:5px;color:#8394a8;font:14px monospace}.pf-subdisplay{display:flex;justify-content:space-between;color:#6f8295;font:700 9px monospace;letter-spacing:2px}.pf-subdisplay span:first-child{color:#b7ff4a}
+.pf-controls{width:100%;max-width:none;margin:16px auto 0}.pf-controls .ba{display:flex;align-items:center;gap:10px}.pf-controls .tm{font:12px monospace;color:#8798a9;width:38px}.pf-controls .tm.der{text-align:right}.pf-controls .env{flex:1}.pf-controls input[type=range]{width:100%}.pf-buttons{display:flex;justify-content:center;align-items:center;gap:12px;margin-top:14px}.pf-buttons .ico{min-width:62px;height:58px;border-radius:16px;background:linear-gradient(145deg,#344254,#151e2d);border:1px solid rgba(205,235,255,.23);box-shadow:inset 0 1px 0 rgba(255,255,255,.17),0 8px 18px rgba(0,0,0,.28);color:#eafcff;font-weight:900}.pf-buttons #pfplay{width:82px;height:72px;border-radius:24px;background:linear-gradient(145deg,#ffffff,#a9c4ce 48%,#eafcff);color:#071018;border:2px solid #dffbff;box-shadow:inset 0 2px 0 #fff,0 0 0 4px rgba(87,241,255,.11),0 10px 25px rgba(0,0,0,.35)}.pf-buttons .ico:active{transform:translateY(2px) scale(.98)}
+.pf-footerrow{display:flex;justify-content:space-between;color:#5d7489;font:8px monospace;letter-spacing:2px;padding:13px 2px 0}
+
+@media(min-width:900px){
+  #playerFull{padding-top:24px;padding-bottom:24px}
+  .pf-shell{display:grid;grid-template-columns:minmax(390px,.95fr) minmax(420px,1.05fr);grid-template-rows:auto 1fr auto auto;gap:16px 22px;padding:20px 22px}
+  .pf-statusline{grid-column:1/-1;margin-bottom:0}
+  .pf-deck{grid-column:1;grid-row:2/4;align-self:stretch;display:flex;flex-direction:column;justify-content:center}
+  .pf-art-wrap{padding:24px}.pf-art{width:min(31vw,390px)}
+  .pf-display{grid-column:2;grid-row:2;margin:0;align-self:center}
+  .pf-controls{grid-column:2;grid-row:3;align-self:center;margin:0}
+  .pf-footerrow{grid-column:1/-1;grid-row:4}
+}
+@media(max-width:899px){
+  .pf-shell{border-radius:24px;padding:12px}.pf-statusline{font-size:9px;letter-spacing:1.5px}.pf-statusline span:last-child{display:none}
+  .pf-art{width:min(76vw,430px)}
+  .pf-display{margin-top:10px}.pf-title b{font-size:22px}.pf-buttons{gap:8px}.pf-buttons .ico{min-width:58px;height:55px}.pf-buttons #pfplay{width:78px;height:68px}.pf-footerrow{font-size:7px}
+}
+@media(max-width:520px){
+  #playerFull{padding-left:10px;padding-right:10px}
+  .pf-top{min-height:45px}.pf-brand{font-size:13px;letter-spacing:1.6px}.pf-brand small{display:none}.pf-led{width:9px;height:9px}
+  .closefull{width:42px;height:42px}
+  .pf-shell{padding:10px;border-radius:22px}.pf-statusline{height:29px;margin-bottom:10px}.pf-art-wrap{padding:16px 12px 4px}.pf-art{width:min(78vw,400px);border-width:7px}
+  .pf-meter{height:30px;padding-bottom:5px}.pf-display{padding:13px 12px;border-radius:15px}.pf-display-head{font-size:9px}.pf-title{margin:13px 0 8px}.pf-title b{font-size:clamp(18px,5.6vw,25px)}.pf-title span{font-size:12px}.pf-subdisplay{font-size:8px}
+  .pf-controls{margin-top:11px}.pf-buttons{gap:7px;margin-top:10px}.pf-buttons .ico{min-width:53px;height:51px;border-radius:14px;font-size:14px}.pf-buttons #pfplay{width:70px;height:62px;border-radius:20px}.pf-footerrow{padding-top:9px}
+}
+</style>
+
 </head>
 <body>
 
