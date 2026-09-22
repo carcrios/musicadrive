@@ -5,9 +5,9 @@
    en el dispositivo.
    ========================================================= */
 
-window.API_KEY = '';
+window.API_KEY = 'AIzaSyCNpaILJGvzxk2xpEaEgA4jfNe2959qOGY';
 
 // Tambien puedes dejar fija la carpeta, para que abra directo:
 window.CARPETA = '';
 
-window.DRIVE_API = 'https://www.googleapis.com/drive/v3';
+window.DRIVE_API = 'https://drive.google.com/drive/folders/1LG6_TyvSglNUXtvT0BvWxTjPbbThHMml?usp=sharing';
