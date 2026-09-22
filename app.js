@@ -22,6 +22,7 @@ var cn = [], or = [], pos = -1, fc = '', alea = false, rep = 'no';
 var vis = [], dib = 0, PAG = 150, arrastre = false, pendiente = 0, deberia = false;
 var tags = {}, instalador = null, playToken = 0, audioObjectUrl = '';
 var cargaAudioToken = 0;
+var reintentosAudio = 0;
 
 /* ================= utilidades ================= */
 function fmt(s) {
@@ -440,23 +441,39 @@ function tocar(p) {
   mediaInfo(s);
   actualizarFavoritosUI();
   actualizarFull();
-  buscarTags(s);
-  if (pos + 1 < or.length) buscarTags(cn[or[pos + 1]]);
+  // Importante: no leer ID3 durante el inicio de la reproducción.
+  // La petición Range adicional a Google Drive puede interferir con la
+  // descarga principal y provocar que algunas pistas fallen.
 
   obtenerAudio(s, fetchToken).then(function (blob) {
     if (token !== playToken || fetchToken !== cargaAudioToken || act() !== s) return;
+    reintentosAudio = 0;
     audioObjectUrl = URL.createObjectURL(blob);
     audio.src = audioObjectUrl;
     audio.load();
-    var pr = audio.play();
-    if (pr && pr.catch) pr.catch(function (e) {
-      if (token !== playToken || act() !== s) return;
-      if (e && e.name === 'NotAllowedError') est('Toca ▶ para reproducir');
-      else if (e && e.name !== 'AbortError') est('No se pudo reproducir: ' + (e.message || e));
-    });
+    var iniciar = function () {
+      if (token !== playToken || fetchToken !== cargaAudioToken || act() !== s) return;
+      var pr = audio.play();
+      if (pr && pr.catch) pr.catch(function (e) {
+        if (token !== playToken || act() !== s) return;
+        if (e && e.name === 'NotAllowedError') est('Toca ▶ para reproducir');
+        else if (e && e.name !== 'AbortError') est('No se pudo reproducir: ' + (e.message || e));
+      });
+    };
+    if (audio.readyState >= 3) iniciar();
+    else audio.addEventListener('canplay', iniciar, { once: true });
   })['catch'](function (e) {
     if (token !== playToken || fetchToken !== cargaAudioToken || act() !== s) return;
     if (e && e.message === 'Carga cancelada') return;
+    if (reintentosAudio < 1) {
+      reintentosAudio++;
+      est('Reintentando…');
+      setTimeout(function () {
+        if (token === playToken && act() === s) tocar(pos);
+      }, 350);
+      return;
+    }
+    reintentosAudio = 0;
     est('No se pudo reproducir: ' + (e && e.message ? e.message : e));
   });
 }
