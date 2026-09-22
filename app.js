@@ -22,7 +22,6 @@ var cn = [], or = [], pos = -1, fc = '', alea = false, rep = 'no';
 var vis = [], dib = 0, PAG = 150, arrastre = false, pendiente = 0, deberia = false;
 var tags = {}, instalador = null, playToken = 0, audioObjectUrl = '';
 var cargaAudioToken = 0;
-var reintentosAudio = 0;
 
 /* ================= utilidades ================= */
 function fmt(s) {
@@ -393,73 +392,158 @@ function buscarTags(s) {
 }
 
 /* ================= reproduccion ================= */
+var sourceToken = 0;
+var sourceTimer = null;
+
+function liberarAudioBlob() {
+  if (audioObjectUrl) {
+    try { URL.revokeObjectURL(audioObjectUrl); } catch (e) {}
+    audioObjectUrl = '';
+  }
+}
+
+function urlWeb(s) {
+  return s && s.w ? s.w : '';
+}
+
+function urlMedia(s) {
+  return API + '/files/' + encodeURIComponent(s.id) + '?alt=media&supportsAllDrives=true&key=' +
+    encodeURIComponent(clave);
+}
+
+/*
+ * Reproducción estable:
+ * 1) Drive API alt=media directamente en <audio> (streaming nativo).
+ * 2) Si Drive no entrega una fuente multimedia compatible, webContentLink.
+ * 3) Solo como último recurso, descarga por fetch() a Blob.
+ *
+ * No se consultan etiquetas ID3 al arrancar ni se precarga la siguiente canción.
+ * Esto reduce las peticiones simultáneas a Drive y evita carreras de reproducción.
+ */
+function reproducirFuente(s, token, urls, idx) {
+  if (token !== sourceToken || !s || act() !== s) return;
+  if (sourceTimer) { clearTimeout(sourceTimer); sourceTimer = null; }
+  if (idx >= urls.length) {
+    est('No se pudo cargar la fuente de audio.');
+    return;
+  }
+
+  var modo = urls[idx].modo;
+  var url = urls[idx].url;
+  var resuelto = false;
+
+  function limpiar() {
+    audio.removeEventListener('canplay', ok);
+    audio.removeEventListener('loadedmetadata', meta);
+    audio.removeEventListener('error', fallo);
+    if (sourceTimer) { clearTimeout(sourceTimer); sourceTimer = null; }
+  }
+
+  function reproducir() {
+    if (resuelto || token !== sourceToken || act() !== s) return;
+    resuelto = true;
+    limpiar();
+    var pr = audio.play();
+    if (pr && pr.catch) pr.catch(function (e) {
+      if (token !== sourceToken || act() !== s) return;
+      if (e && e.name === 'NotAllowedError') est('Toca ▶ para reproducir');
+      else if (e && e.name !== 'AbortError') siguienteFuente();
+    });
+  }
+
+  function ok() { reproducir(); }
+  function meta() {
+    if (modo === 'blob') reproducir();
+  }
+  function fallo() {
+    if (resuelto || token !== sourceToken || act() !== s) return;
+    siguienteFuente();
+  }
+
+  function siguienteFuente() {
+    if (resuelto || token !== sourceToken || act() !== s) return;
+    resuelto = true;
+    limpiar();
+    if (modo === 'blob') {
+      est('No se pudo cargar la fuente de audio.');
+      return;
+    }
+    if (idx + 1 < urls.length) {
+      reproducirFuente(s, token, urls, idx + 1);
+      return;
+    }
+    // Fallback final: convertir la respuesta de Drive en Blob.
+    descargarBlob(s, token).then(function (blob) {
+      if (token !== sourceToken || act() !== s) return;
+      liberarAudioBlob();
+      audioObjectUrl = URL.createObjectURL(blob);
+      reproducirFuente(s, token, [{ modo: 'blob', url: audioObjectUrl }], 0);
+    }).catch(function (e) {
+      if (token !== sourceToken || act() !== s) return;
+      est('No se pudo reproducir: ' + (e && e.message ? e.message : 'Google Drive no entregó el audio.'));
+    });
+  }
+
+  audio.addEventListener('canplay', ok);
+  audio.addEventListener('loadedmetadata', meta);
+  audio.addEventListener('error', fallo);
+  audio.src = url;
+  audio.load();
+
+  // Si Drive tarda demasiado o no dispara eventos multimedia, probamos la siguiente fuente.
+  sourceTimer = setTimeout(function () {
+    if (!resuelto && token === sourceToken && act() === s) siguienteFuente();
+  }, 10000);
+}
+
+function descargarBlob(s, token) {
+  var u = urlMedia(s);
+  return fetch(u, { cache: 'no-store' }).then(function (r) {
+    var type = (r.headers.get('Content-Type') || '').toLowerCase();
+    if (!r.ok) {
+      return r.text().then(function (txt) {
+        var msg = '';
+        try { var j = txt ? JSON.parse(txt) : null; msg = j && j.error && j.error.message || ''; } catch (e) {}
+        throw new Error('Google Drive respondió HTTP ' + r.status + (msg ? ': ' + msg : ''));
+      });
+    }
+    if (token !== sourceToken) throw new Error('Carga cancelada');
+    return r.blob().then(function (blob) {
+      var bt = (blob.type || type || '').toLowerCase();
+      if (bt && bt.indexOf('audio/') !== 0 && bt.indexOf('application/octet-stream') !== 0) {
+        throw new Error('Drive devolvió ' + bt + ' en lugar de audio.');
+      }
+      return blob;
+    });
+  });
+}
+
 function tocar(p) {
   if (p < 0 || p >= or.length) return;
-
   pos = p;
   var s = act();
   $('ti').textContent = titulo(s);
-  est('Cargando…');
+  est('Cargando audio…');
   marcar();
   guardarSesion();
   pendiente = 0;
 
-  /*
-   * IMPORTANTE:
-   * La reproducción vuelve a usar el mismo mecanismo directo que el
-   * reproductor original: Drive API -> <audio>. No usamos fetch(), Blob,
-   * webContentLink ni lecturas ID3 durante el arranque.
-   *
-   * Esto evita problemas de CORS/redirecciones y mantiene el comportamiento
-   * que ya comprobamos que funciona con Google Drive.
-   */
-  var token = ++playToken;
+  var token = ++sourceToken;
+  sourceTimer && clearTimeout(sourceTimer);
+  sourceTimer = null;
+  audio.pause();
+  liberarAudioBlob();
+  audio.removeAttribute('src');
+  audio.load();
   mediaInfo(s);
   actualizarFavoritosUI();
   actualizarFull();
 
-  audio.pause();
-  audio.removeAttribute('src');
-  audio.load();
-
-  var url = urlAudio(s);
-  audio.src = url;
-  audio.load();
-
-  var comenzar = function () {
-    if (token !== playToken || act() !== s) return;
-    var pr;
-    try { pr = audio.play(); }
-    catch (e) {
-      if (token !== playToken || act() !== s) return;
-      est('No se pudo reproducir: ' + (e.message || e));
-      return;
-    }
-    if (pr && pr.catch) pr.catch(function (e) {
-      if (token !== playToken || act() !== s) return;
-      if (e && e.name === 'NotAllowedError') est('Toca ▶ para reproducir');
-      else if (!e || e.name !== 'AbortError') est('No se pudo reproducir: ' + (e.message || e));
-    });
-  };
-
-  var errorHandler = function () {
-    if (token !== playToken || act() !== s) return;
-    audio.removeEventListener('error', errorHandler);
-    var mediaError = audio.error;
-    var detalle = '';
-    if (mediaError) {
-      if (mediaError.code === 1) detalle = 'La carga fue cancelada.';
-      else if (mediaError.code === 2) detalle = 'Error de red al cargar el archivo.';
-      else if (mediaError.code === 3) detalle = 'El archivo no pudo ser decodificado.';
-      else if (mediaError.code === 4) detalle = 'El navegador no reconoce el formato o Google no entregó el audio.';
-    }
-    est('No se pudo cargar la fuente de audio' + (detalle ? ': ' + detalle : ''));
-  };
-  audio.addEventListener('error', errorHandler, { once: true });
-
-  if (audio.readyState >= 3) comenzar();
-  else audio.addEventListener('canplay', comenzar, { once: true });
+  var fuentes = [{ modo: 'media', url: urlMedia(s) }];
+  if (urlWeb(s)) fuentes.push({ modo: 'web', url: urlWeb(s) });
+  reproducirFuente(s, token, fuentes, 0);
 }
+
 function sig(auto) {
   if (!or.length) return;
   if (auto && rep === 'una') { audio.currentTime = 0; audio.play(); return; }
