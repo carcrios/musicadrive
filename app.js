@@ -401,8 +401,29 @@ function buscarTags(s) {
 }
 
 /* ================= reproduccion ================= */
+/*
+ * v2.6.5 · Cambio de canción con el celular bloqueado
+ *
+ * Con la pantalla bloqueada, el sistema (sobre todo iPhone) solo deja
+ * arrancar el audio si play() se pide EN EL MISMO INSTANTE en que se
+ * pulsa ⏭/⏮ en la pantalla bloqueada o en que termina la canción.
+ *
+ * Antes se hacía: pause() → vaciar el <audio> → esperar 'canplay' →
+ * play(). Ese play() llegaba tarde, fuera de ese permiso, y el sistema
+ * lo rechazaba: cambiaba el título pero no sonaba ("Toca ▶").
+ *
+ * Ahora se cambia src y se llama play() de inmediato, sin pausar ni
+ * vaciar el elemento, así la sesión de audio nunca se apaga.
+ * El orden de fuentes no cambia:
+ *   1) alt=media (PC/Android) o webContentLink (iPhone/iPad)
+ *   2) la otra
+ *   3) último recurso: descarga a Blob.
+ */
 var sourceToken = 0;
 var sourceTimer = null;
+var cargando = false;        // hay una fuente en prueba: sus errores los maneja ese intento
+var limpiarIntento = null;   // quita los listeners del intento en curso
+var SALTO_BLOQUEO = 10;      // segundos de ±10 en Android / PC
 
 function liberarAudioBlob() {
   if (audioObjectUrl) {
@@ -420,19 +441,18 @@ function urlMedia(s) {
     encodeURIComponent(clave);
 }
 
-/*
- * Reproducción estable:
- * 1) Drive API alt=media directamente en <audio> (streaming nativo).
- * 2) Si Drive no entrega una fuente multimedia compatible, webContentLink.
- * 3) Solo como último recurso, descarga por fetch() a Blob.
- *
- * No se consultan etiquetas ID3 al arrancar ni se precarga la siguiente canción.
- * Esto reduce las peticiones simultáneas a Drive y evita carreras de reproducción.
- */
+function fuentesDe(s) {
+  if (ES_IOS && urlWeb(s)) return [{ modo: 'web', url: urlWeb(s) }, { modo: 'media', url: urlMedia(s) }];
+  var f = [{ modo: 'media', url: urlMedia(s) }];
+  if (urlWeb(s)) f.push({ modo: 'web', url: urlWeb(s) });
+  return f;
+}
+
 function reproducirFuente(s, token, urls, idx) {
   if (token !== sourceToken || !s || act() !== s) return;
-  if (sourceTimer) { clearTimeout(sourceTimer); sourceTimer = null; }
+  if (limpiarIntento) limpiarIntento();
   if (idx >= urls.length) {
+    cargando = false;
     est('No se pudo cargar la fuente de audio.');
     return;
   }
@@ -440,40 +460,32 @@ function reproducirFuente(s, token, urls, idx) {
   var modo = urls[idx].modo;
   var url = urls[idx].url;
   var resuelto = false;
+  cargando = true;
+
+  function vigente() { return !resuelto && token === sourceToken && act() === s; }
 
   function limpiar() {
-    audio.removeEventListener('canplay', ok);
+    audio.removeEventListener('playing', ok);
     audio.removeEventListener('loadedmetadata', meta);
     audio.removeEventListener('error', fallo);
     if (sourceTimer) { clearTimeout(sourceTimer); sourceTimer = null; }
+    if (limpiarIntento === limpiar) limpiarIntento = null;
   }
+  function terminar() { resuelto = true; cargando = false; limpiar(); }
 
-  function reproducir() {
-    if (resuelto || token !== sourceToken || act() !== s) return;
-    resuelto = true;
-    limpiar();
-    var pr = audio.play();
-    if (pr && pr.catch) pr.catch(function (e) {
-      if (token !== sourceToken || act() !== s) return;
-      if (e && e.name === 'NotAllowedError') est('Toca ▶ para reproducir');
-      else if (e && e.name !== 'AbortError') siguienteFuente();
-    });
-  }
-
-  function ok() { reproducir(); }
+  function ok() { if (vigente()) terminar(); }
   function meta() {
-    if (modo === 'blob') reproducir();
+    // La fuente es válida: el temporizador de respaldo ya no hace falta.
+    if (vigente() && sourceTimer) { clearTimeout(sourceTimer); sourceTimer = null; }
   }
-  function fallo() {
-    if (resuelto || token !== sourceToken || act() !== s) return;
-    siguienteFuente();
-  }
+  function fallo() { if (vigente()) siguienteFuente(); }
 
   function siguienteFuente() {
-    if (resuelto || token !== sourceToken || act() !== s) return;
+    if (!vigente()) return;
     resuelto = true;
     limpiar();
     if (modo === 'blob') {
+      cargando = false;
       est('No se pudo cargar la fuente de audio.');
       return;
     }
@@ -481,28 +493,48 @@ function reproducirFuente(s, token, urls, idx) {
       reproducirFuente(s, token, urls, idx + 1);
       return;
     }
-    // Fallback final: convertir la respuesta de Drive en Blob.
+    // Último recurso: convertir la respuesta de Drive en Blob.
     descargarBlob(s, token).then(function (blob) {
       if (token !== sourceToken || act() !== s) return;
-      liberarAudioBlob();
-      audioObjectUrl = URL.createObjectURL(blob);
-      reproducirFuente(s, token, [{ modo: 'blob', url: audioObjectUrl }], 0);
-    }).catch(function (e) {
+      reproducirFuente(s, token, [{ modo: 'blob', url: URL.createObjectURL(blob) }], 0);
+    })['catch'](function (e) {
       if (token !== sourceToken || act() !== s) return;
+      cargando = false;
       est('No se pudo reproducir: ' + (e && e.message ? e.message : 'Google Drive no entregó el audio.'));
     });
   }
 
-  audio.addEventListener('canplay', ok);
+  limpiarIntento = limpiar;
+  audio.addEventListener('playing', ok);
   audio.addEventListener('loadedmetadata', meta);
   audio.addEventListener('error', fallo);
-  audio.src = url;
-  audio.load();
 
-  // Si Drive tarda demasiado o no dispara eventos multimedia, probamos la siguiente fuente.
+  // Cambiar la fuente y pedir play() en el mismo instante: sin pause(),
+  // sin vaciar el <audio> y sin esperar 'canplay'.
+  var blobViejo = audioObjectUrl;
+  audio.src = url;
+  audioObjectUrl = modo === 'blob' ? url : '';
+  if (blobViejo && blobViejo !== url) { try { URL.revokeObjectURL(blobViejo); } catch (e) {} }
+
+  var pr;
+  try { pr = audio.play(); } catch (e) { pr = null; }
+  if (pr && pr['catch']) pr['catch'](function (e) {
+    if (!vigente()) return;
+    if (e && e.name === 'NotAllowedError') {
+      // El sistema pide un toque. El intento sigue vivo: al tocar ▶ arranca,
+      // y si la fuente falla todavía se prueba la siguiente.
+      if (sourceTimer) { clearTimeout(sourceTimer); sourceTimer = null; }
+      est('Toca ▶ para reproducir');
+      return;
+    }
+    if (e && e.name === 'AbortError') return;   // la interrumpió una pausa u otra canción
+    siguienteFuente();
+  });
+
+  // Si Drive no responde nada en 15 s, probar la siguiente fuente.
   sourceTimer = setTimeout(function () {
-    if (!resuelto && token === sourceToken && act() === s) siguienteFuente();
-  }, 10000);
+    if (vigente() && deberia) siguienteFuente();
+  }, 15000);
 }
 
 function descargarBlob(s, token) {
@@ -531,36 +563,37 @@ function tocar(p) {
   if (p < 0 || p >= or.length) return;
   pos = p;
   var s = act();
-  $('ti').textContent = titulo(s);
-  est('Cargando audio…');
-  marcar();
-  guardarSesion();
-  pendiente = 0;
+  deberia = true;
+  // 'pendiente' (seguir donde quedaste) lo ponen en 0 quienes cambian de
+  // canción; aquí se respeta para que ▶ retome la posición guardada.
 
   var token = ++sourceToken;
-  sourceTimer && clearTimeout(sourceTimer);
-  sourceTimer = null;
-  audio.pause();
-  liberarAudioBlob();
-  audio.removeAttribute('src');
-  audio.load();
+  if (sourceTimer) { clearTimeout(sourceTimer); sourceTimer = null; }
+
+  // 1) Audio primero, de forma síncrona (es lo que permite la pantalla bloqueada).
+  reproducirFuente(s, token, fuentesDe(s), 0);
+
+  // 2) Pantalla bloqueada: título nuevo y barra de progreso reiniciada.
+  limpiarPosicion();
   mediaInfo(s);
+
+  // 3) Interfaz.
+  $('ti').textContent = titulo(s);
+  if (cargando) est('Cargando audio…');
+  marcar();
+  guardarSesion();
   actualizarFavoritosUI();
   actualizarFull();
-
-  var fuentes;
-  if (ES_IOS && urlWeb(s)) {
-    fuentes = [{ modo: 'web', url: urlWeb(s) }, { modo: 'media', url: urlMedia(s) }];
-  } else {
-    fuentes = [{ modo: 'media', url: urlMedia(s) }];
-    if (urlWeb(s)) fuentes.push({ modo: 'web', url: urlWeb(s) });
-  }
-  reproducirFuente(s, token, fuentes, 0);
 }
 
 function sig(auto) {
   if (!or.length) return;
-  if (auto && rep === 'una') { audio.currentTime = 0; audio.play(); return; }
+  if (auto && rep === 'una') {
+    audio.currentTime = 0;
+    var pr = audio.play();
+    if (pr && pr['catch']) pr['catch'](function () {});
+    return;
+  }
   var p = pos + 1;
   if (p >= or.length) {
     if (auto && rep === 'no') { est('Fin de la lista'); return; }
@@ -572,14 +605,14 @@ function sig(auto) {
 }
 function ant() {
   if (!or.length) return;
-  if (audio.currentTime > 3 || pos <= 0) { audio.currentTime = 0; return; }
+  if (audio.currentTime > 3 || pos <= 0) { audio.currentTime = 0; posicion(); return; }
   pendiente = 0;
   tocar(pos - 1);
 }
 function salto(g) {
-  if (isFinite(audio.duration)) {
-    audio.currentTime = Math.max(0, Math.min(audio.duration - 0.25, audio.currentTime + g));
-  }
+  if (!isFinite(audio.duration) || audio.duration <= 0) return;
+  audio.currentTime = Math.max(0, Math.min(audio.duration - 0.25, audio.currentTime + g));
+  posicion();
 }
 function mediaInfo(s) {
   if (!('mediaSession' in navigator)) return;
@@ -587,21 +620,65 @@ function mediaInfo(s) {
   try {
     navigator.mediaSession.metadata = new MediaMetadata({
       title: g.t || s.n, artist: g.a || 'Google Drive', album: g.b || s.c || 'Mi Música',
-      artwork: [{ src: 'icon-512.png', sizes: '512x512', type: 'image/png' }]
+      artwork: [
+        { src: 'icon-192.png', sizes: '192x192', type: 'image/png' },
+        { src: 'icon-512.png', sizes: '512x512', type: 'image/png' }
+      ]
     });
   } catch (e) {}
+  // iOS a veces olvida los controles al cambiar de fuente: se vuelven a registrar.
+  controlesBloqueo();
   posicion();
 }
 function posicion() {
   if (!('mediaSession' in navigator) || !navigator.mediaSession.setPositionState) return;
-  if (!isFinite(audio.duration) || audio.duration <= 0) return;
+  var dur = Number(audio.duration), cur = Number(audio.currentTime) || 0, vel = Number(audio.playbackRate) || 1;
+  if (!isFinite(dur) || dur <= 0 || vel <= 0) return;
   try {
     navigator.mediaSession.setPositionState({
-      duration: audio.duration,
-      position: Math.min(audio.currentTime || 0, audio.duration),
-      playbackRate: audio.playbackRate || 1
+      duration: dur,
+      position: Math.max(0, Math.min(cur, dur)),
+      playbackRate: vel
     });
   } catch (e) {}
+}
+function limpiarPosicion() {
+  if (!('mediaSession' in navigator) || !navigator.mediaSession.setPositionState) return;
+  try { navigator.mediaSession.setPositionState(); } catch (e) {}
+}
+
+/* Controles de la pantalla bloqueada / notificación. */
+function controlesBloqueo() {
+  if (!('mediaSession' in navigator)) return;
+  var mh = function (a, f) { try { navigator.mediaSession.setActionHandler(a, f); } catch (e) {} };
+  mh('play', function () {
+    deberia = true;
+    if (!audio.getAttribute('src') && or.length) { tocar(pos >= 0 ? pos : 0); return; }
+    var pr = audio.play();
+    if (pr && pr['catch']) pr['catch'](function () {});
+  });
+  mh('pause', function () { deberia = false; audio.pause(); });
+  mh('nexttrack', function () { sig(false); });
+  mh('previoustrack', function () { ant(); });
+  mh('seekto', function (d) {
+    if (!d || !isFinite(d.seekTime) || !isFinite(audio.duration)) return;
+    var t = Math.max(0, Math.min(audio.duration, d.seekTime));
+    try {
+      if (d.fastSeek && typeof audio.fastSeek === 'function') audio.fastSeek(t);
+      else audio.currentTime = t;
+    } catch (e) { try { audio.currentTime = t; } catch (x) {} }
+    posicion();
+  });
+  // iPhone/iPad: si hay ±10 s registrados, iOS los muestra EN LUGAR de ⏮ ⏭
+  // en la pantalla bloqueada. Ahí se dejan solo anterior/siguiente; la barra
+  // de la pantalla bloqueada sigue sirviendo para moverse dentro de la canción.
+  if (ES_IOS) {
+    mh('seekbackward', null);
+    mh('seekforward', null);
+  } else {
+    mh('seekbackward', function (d) { salto(-((d && d.seekOffset) || SALTO_BLOQUEO)); });
+    mh('seekforward', function (d) { salto((d && d.seekOffset) || SALTO_BLOQUEO); });
+  }
 }
 function guardarSesion() {
   var a = act();
@@ -722,7 +799,11 @@ $('pl').onclick = function () {
   if (!or.length) return;
   if (pos < 0) { tocar(0); return; }
   if (!audio.src) { tocar(pos); return; }
-  if (audio.paused) { deberia = true; audio.play(); } else { deberia = false; audio.pause(); }
+  if (audio.paused) {
+    deberia = true;
+    var pr = audio.play();
+    if (pr && pr['catch']) pr['catch'](function () {});
+  } else { deberia = false; audio.pause(); }
 };
 $('si').onclick = function () { sig(false); };
 $('an').onclick = ant;
@@ -751,6 +832,7 @@ $('pr').addEventListener('input', function () {
 $('pr').addEventListener('change', function () {
   if (isFinite(audio.duration)) audio.currentTime = $('pr').value / 1000 * audio.duration;
   arrastre = false;
+  posicion();
 });
 
 var ultimo = 0;
@@ -772,6 +854,8 @@ audio.addEventListener('loadedmetadata', function () {
   posicion();
   actualizarFull();
 });
+audio.addEventListener('durationchange', posicion);
+audio.addEventListener('seeked', posicion);
 audio.addEventListener('playing', function () { var a = act(); est(a ? (a.c || '') : ''); });
 audio.addEventListener('ended', function () { sig(true); });
 audio.addEventListener('play', function () {
@@ -788,7 +872,8 @@ audio.addEventListener('pause', function () {
   actualizarFull();
 });
 audio.addEventListener('error', function () {
-  if (!audio.src) return;
+  // Mientras se prueba una fuente, su propio manejador pasa a la siguiente.
+  if (!audio.src || cargando) return;
   var mediaError = audio.error;
   var code = mediaError ? mediaError.code : 0;
   if (code === 1) return;
@@ -797,7 +882,7 @@ audio.addEventListener('error', function () {
     code === 4 ? 'Google Drive no entregó una fuente de audio compatible.' :
     'Google Drive no entregó una fuente de audio válida.';
   est('No se pudo reproducir: ' + detalle);
-});;
+});
 window.addEventListener('beforeunload', function () { liberarAudioBlob(); guardarSesion(); });
 document.addEventListener('visibilitychange', function () {
   // No forzar play() al volver a la pestaña: algunos navegadores consideran
@@ -816,16 +901,7 @@ document.addEventListener('keydown', function (e) {
   else if (k === 'r') $('re').onclick();
 });
 
-if ('mediaSession' in navigator) {
-  var mh = function (a, f) { try { navigator.mediaSession.setActionHandler(a, f); } catch (e) {} };
-  mh('play', function () { deberia = true; audio.play(); });
-  mh('pause', function () { deberia = false; audio.pause(); });
-  mh('nexttrack', function () { sig(false); });
-  mh('previoustrack', ant);
-  mh('seekforward', function (d) { salto((d && d.seekOffset) || 10); });
-  mh('seekbackward', function (d) { salto(-((d && d.seekOffset) || 10)); });
-  mh('seekto', function (d) { if (isFinite(audio.duration)) audio.currentTime = d.seekTime; });
-}
+controlesBloqueo();
 
 /* ================= instalacion ================= */
 window.addEventListener('beforeinstallprompt', function (e) {
