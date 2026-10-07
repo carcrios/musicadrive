@@ -54,6 +54,23 @@ function act() { return pos >= 0 && pos < or.length ? cn[or[pos]] : null; }
 function guardar(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
 function leer(k, x) { try { var v = localStorage.getItem(k); return v ? JSON.parse(v) : x; } catch (e) { return x; } }
 
+/* Registro de diagnóstico (botón 🩺): guarda en el teléfono los últimos
+   eventos de reproducción para ver qué pasa con la pantalla bloqueada.
+   🔒 = la app estaba en segundo plano / pantalla bloqueada. */
+var VERSION = '2.6.6';
+var LOG_KEY = 'mus_diag';
+var registro = leer(LOG_KEY, []);
+if (!Array.isArray(registro)) registro = [];
+function diag(msg) {
+  try {
+    var d = new Date(), ms = String(d.getMilliseconds());
+    while (ms.length < 3) ms = '0' + ms;
+    registro.push(d.toTimeString().slice(0, 8) + '.' + ms + (document.hidden ? ' 🔒 ' : '    ') + msg);
+    if (registro.length > 300) registro.splice(0, registro.length - 300);
+    guardar(LOG_KEY, registro);
+  } catch (e) {}
+}
+
 /** Saca el ID de una URL de Drive. Acepta todas estas formas:
  *   drive.google.com/drive/folders/ID
  *   drive.google.com/drive/u/0/folders/ID?usp=sharing
@@ -414,7 +431,16 @@ function buscarTags(s) {
  *
  * Ahora se cambia src y se llama play() de inmediato, sin pausar ni
  * vaciar el elemento, así la sesión de audio nunca se apaga.
- * El orden de fuentes no cambia:
+ *
+ * v2.6.6 · iPhone: aun con play() inmediato, si la canción nueva tiene que
+ * bajar de Drive, durante esos segundos no suena nada y iOS congela la app
+ * bloqueada: la descarga no termina y la canción no arranca hasta
+ * desbloquear. Por eso, mientras suena una canción, se guardan en memoria
+ * la siguiente, la de después y la anterior (ver "precarga"). Así ⏭/⏮ y
+ * el paso automático arrancan al instante desde el teléfono, sin red.
+ *
+ * Orden de fuentes:
+ *   0) la copia en memoria, si ya está precargada
  *   1) alt=media (PC/Android) o webContentLink (iPhone/iPad)
  *   2) la otra
  *   3) último recurso: descarga a Blob.
@@ -442,10 +468,104 @@ function urlMedia(s) {
 }
 
 function fuentesDe(s) {
-  if (ES_IOS && urlWeb(s)) return [{ modo: 'web', url: urlWeb(s) }, { modo: 'media', url: urlMedia(s) }];
-  var f = [{ modo: 'media', url: urlMedia(s) }];
-  if (urlWeb(s)) f.push({ modo: 'web', url: urlWeb(s) });
+  var f = [];
+  if (cacheAudio[s.id]) f.push({ modo: 'memoria', url: cacheAudio[s.id].url });
+  if (ES_IOS && urlWeb(s)) {
+    f.push({ modo: 'web', url: urlWeb(s) }, { modo: 'media', url: urlMedia(s) });
+  } else {
+    f.push({ modo: 'media', url: urlMedia(s) });
+    if (urlWeb(s)) f.push({ modo: 'web', url: urlWeb(s) });
+  }
   return f;
+}
+
+/* ================= precarga (iPhone) ================= */
+var PRECARGAR = ES_IOS;
+var PRECARGA_MAX_MB = 60;      // archivos más grandes no se precargan
+var cacheAudio = {};           // id -> { url: blob:..., mb }
+var precargaId = '', precargaCtrl = null, precargaTimer = null;
+var precargaFallo = {};        // id -> hora del último fallo (no reintentar enseguida)
+
+/** Índice (en cn) de la canción que está d pasos adelante/atrás en la lista. */
+function vecino(d) {
+  if (pos < 0 || !or.length) return -1;
+  var p = pos + d;
+  if (p >= or.length) { if (alea) return -1; p = p % or.length; }
+  if (p < 0) return -1;
+  return or[p];
+}
+/** En orden de prioridad: siguiente, la de después, anterior. */
+function idsAPrecargar() {
+  var a = act(), r = [];
+  [1, 2, -1].forEach(function (d) {
+    var i = vecino(d), s = i >= 0 ? cn[i] : null;
+    if (!s || (a && s.id === a.id) || r.indexOf(s.id) >= 0) return;
+    r.push(s.id);
+  });
+  return r;
+}
+function quitarDeMemoria(id) {
+  var c = cacheAudio[id];
+  if (!c) return;
+  delete cacheAudio[id];
+  try { URL.revokeObjectURL(c.url); } catch (e) {}
+}
+function programarPrecarga(espera) {
+  if (!PRECARGAR) return;
+  if (precargaTimer) clearTimeout(precargaTimer);
+  precargaTimer = setTimeout(function () { precargaTimer = null; precargar(); }, espera || 0);
+}
+function precargar() {
+  var a = act();
+  if (!a || !clave) return;
+  var quiero = idsAPrecargar();
+
+  // Liberar lo que ya no está cerca (nunca lo que está sonando).
+  Object.keys(cacheAudio).forEach(function (id) {
+    if (id === a.id || quiero.indexOf(id) >= 0 || audio.src === cacheAudio[id].url) return;
+    quitarDeMemoria(id);
+  });
+
+  if (precargaId) {
+    if (quiero.indexOf(precargaId) >= 0) return;    // ya se descarga algo útil
+    try { if (precargaCtrl) precargaCtrl.abort(); } catch (e) {}
+    precargaId = ''; precargaCtrl = null;
+  }
+
+  var ahora = Date.now(), id = '';
+  for (var k = 0; k < quiero.length && !id; k++) {
+    var q = quiero[k], c = cn[indice(q)];
+    if (!c || cacheAudio[q]) continue;
+    if (precargaFallo[q] && ahora - precargaFallo[q] < 120000) continue;
+    if (c.z && c.z > PRECARGA_MAX_MB * 1048576) continue;
+    id = q;
+  }
+  if (!id) return;
+
+  var s = cn[indice(id)], t0 = Date.now();
+  precargaId = id;
+  precargaCtrl = typeof AbortController === 'function' ? new AbortController() : null;
+  fetch(urlMedia(s), precargaCtrl ? { signal: precargaCtrl.signal } : {}).then(function (r) {
+    if (!r.ok) throw new Error('Drive respondió HTTP ' + r.status);
+    return r.blob();
+  }).then(function (b) {
+    if (precargaId !== id) return;                  // se canceló mientras bajaba
+    var tipo = (b.type || '').toLowerCase();
+    if (tipo.indexOf('audio/') !== 0) {
+      if (tipo && tipo.indexOf('application/octet-stream') !== 0) throw new Error('Drive devolvió ' + tipo);
+      b = new Blob([b], { type: s.m || 'audio/mpeg' });  // iOS necesita un tipo de audio
+    }
+    cacheAudio[id] = { url: URL.createObjectURL(b), mb: b.size / 1048576 };
+    diag('precargada: ' + s.n + ' (' + cacheAudio[id].mb.toFixed(1) + ' MB en ' +
+      ((Date.now() - t0) / 1000).toFixed(1) + ' s)');
+  })['catch'](function (e) {
+    if (e && e.name === 'AbortError') return;
+    precargaFallo[id] = Date.now();
+    diag('precarga falló: ' + s.n + ' · ' + ((e && e.message) || e));
+  }).then(function () {
+    if (precargaId === id) { precargaId = ''; precargaCtrl = null; }
+    programarPrecarga(300);
+  });
 }
 
 function reproducirFuente(s, token, urls, idx) {
@@ -478,12 +598,17 @@ function reproducirFuente(s, token, urls, idx) {
     // La fuente es válida: el temporizador de respaldo ya no hace falta.
     if (vigente() && sourceTimer) { clearTimeout(sourceTimer); sourceTimer = null; }
   }
-  function fallo() { if (vigente()) siguienteFuente(); }
+  function fallo() {
+    if (!vigente()) return;
+    diag('error de la fuente ' + modo + ' (código ' + (audio.error ? audio.error.code : '?') + ')');
+    siguienteFuente();
+  }
 
   function siguienteFuente() {
     if (!vigente()) return;
     resuelto = true;
     limpiar();
+    if (modo === 'memoria') quitarDeMemoria(s.id);
     if (modo === 'blob') {
       cargando = false;
       est('No se pudo cargar la fuente de audio.');
@@ -516,9 +641,14 @@ function reproducirFuente(s, token, urls, idx) {
   audioObjectUrl = modo === 'blob' ? url : '';
   if (blobViejo && blobViejo !== url) { try { URL.revokeObjectURL(blobViejo); } catch (e) {} }
 
+  if (idx > 0) diag('probando otra fuente: ' + modo);
+
   var pr;
   try { pr = audio.play(); } catch (e) { pr = null; }
-  if (pr && pr['catch']) pr['catch'](function (e) {
+  if (pr && pr.then) pr.then(function () {
+    if (token === sourceToken) diag('play() aceptado (' + modo + ')');
+  }, function (e) {
+    if (token === sourceToken) diag('play() rechazado (' + modo + '): ' + (e && e.name));
     if (!vigente()) return;
     if (e && e.name === 'NotAllowedError') {
       // El sistema pide un toque. El intento sigue vivo: al tocar ▶ arranca,
@@ -533,7 +663,7 @@ function reproducirFuente(s, token, urls, idx) {
 
   // Si Drive no responde nada en 15 s, probar la siguiente fuente.
   sourceTimer = setTimeout(function () {
-    if (vigente() && deberia) siguienteFuente();
+    if (vigente() && deberia) { diag('15 s sin respuesta de la fuente ' + modo); siguienteFuente(); }
   }, 15000);
 }
 
@@ -571,7 +701,9 @@ function tocar(p) {
   if (sourceTimer) { clearTimeout(sourceTimer); sourceTimer = null; }
 
   // 1) Audio primero, de forma síncrona (es lo que permite la pantalla bloqueada).
-  reproducirFuente(s, token, fuentesDe(s), 0);
+  var fuentes = fuentesDe(s);
+  diag('canción: ' + s.n + ' · desde ' + (fuentes[0].modo === 'memoria' ? 'MEMORIA' : 'la red (' + fuentes[0].modo + ')'));
+  reproducirFuente(s, token, fuentes, 0);
 
   // 2) Pantalla bloqueada: título nuevo y barra de progreso reiniciada.
   limpiarPosicion();
@@ -626,8 +758,6 @@ function mediaInfo(s) {
       ]
     });
   } catch (e) {}
-  // iOS a veces olvida los controles al cambiar de fuente: se vuelven a registrar.
-  controlesBloqueo();
   posicion();
 }
 function posicion() {
@@ -652,15 +782,17 @@ function controlesBloqueo() {
   if (!('mediaSession' in navigator)) return;
   var mh = function (a, f) { try { navigator.mediaSession.setActionHandler(a, f); } catch (e) {} };
   mh('play', function () {
+    diag('pantalla bloqueada: ▶');
     deberia = true;
     if (!audio.getAttribute('src') && or.length) { tocar(pos >= 0 ? pos : 0); return; }
     var pr = audio.play();
-    if (pr && pr['catch']) pr['catch'](function () {});
+    if (pr && pr['catch']) pr['catch'](function (e) { diag('play() rechazado: ' + (e && e.name)); });
   });
-  mh('pause', function () { deberia = false; audio.pause(); });
-  mh('nexttrack', function () { sig(false); });
-  mh('previoustrack', function () { ant(); });
+  mh('pause', function () { diag('pantalla bloqueada: pausa'); deberia = false; audio.pause(); });
+  mh('nexttrack', function () { diag('pantalla bloqueada: ⏭ siguiente'); sig(false); });
+  mh('previoustrack', function () { diag('pantalla bloqueada: ⏮ anterior'); ant(); });
   mh('seekto', function (d) {
+    diag('pantalla bloqueada: mover barra a ' + fmt(d && d.seekTime));
     if (!d || !isFinite(d.seekTime) || !isFinite(audio.duration)) return;
     var t = Math.max(0, Math.min(audio.duration, d.seekTime));
     try {
@@ -676,8 +808,8 @@ function controlesBloqueo() {
     mh('seekbackward', null);
     mh('seekforward', null);
   } else {
-    mh('seekbackward', function (d) { salto(-((d && d.seekOffset) || SALTO_BLOQUEO)); });
-    mh('seekforward', function (d) { salto((d && d.seekOffset) || SALTO_BLOQUEO); });
+    mh('seekbackward', function (d) { diag('pantalla bloqueada: −10 s'); salto(-((d && d.seekOffset) || SALTO_BLOQUEO)); });
+    mh('seekforward', function (d) { diag('pantalla bloqueada: +10 s'); salto((d && d.seekOffset) || SALTO_BLOQUEO); });
   }
 }
 function guardarSesion() {
@@ -776,6 +908,7 @@ $('fc').addEventListener('change', function (e) {
   orden(idx >= 0 && ambito().indexOf(idx) >= 0 ? idx : null);
   pintar(); guardarSesion();
   est(fc ? 'Solo: ' + fc : '');
+  programarPrecarga(1000);
 });
 $('br').onclick = function () { cargarBiblioteca(true); };
 $('bc').onclick = abrirInicio;
@@ -815,6 +948,7 @@ $('al').onclick = function () {
   $('al').className = 'ico md' + (alea ? ' on' : '');
   est(alea ? 'Aleatorio activado' : 'Aleatorio desactivado');
   guardarSesion();
+  programarPrecarga(1000);
 };
 $('re').onclick = function () {
   rep = rep === 'no' ? 'todas' : rep === 'todas' ? 'una' : 'no';
@@ -856,8 +990,15 @@ audio.addEventListener('loadedmetadata', function () {
 });
 audio.addEventListener('durationchange', posicion);
 audio.addEventListener('seeked', posicion);
-audio.addEventListener('playing', function () { var a = act(); est(a ? (a.c || '') : ''); });
-audio.addEventListener('ended', function () { sig(true); });
+audio.addEventListener('playing', function () {
+  var a = act();
+  est(a ? (a.c || '') : '');
+  diag('sonando ✔');
+  programarPrecarga(2500);   // con la canción ya sonando, bajar las vecinas
+});
+audio.addEventListener('waiting', function () { diag('esperando datos…'); });
+audio.addEventListener('stalled', function () { diag('la descarga se detuvo (stalled)'); });
+audio.addEventListener('ended', function () { diag('terminó la canción → siguiente'); sig(true); });
 audio.addEventListener('play', function () {
   deberia = true;
   $('i1').style.display = 'none'; $('i2').style.display = '';
@@ -866,6 +1007,7 @@ audio.addEventListener('play', function () {
   actualizarFull();
 });
 audio.addEventListener('pause', function () {
+  if (!audio.ended) diag('en pausa');
   $('i1').style.display = ''; $('i2').style.display = 'none';
   try { navigator.mediaSession.playbackState = 'paused'; } catch (e) {}
   guardarSesion();
@@ -887,7 +1029,37 @@ window.addEventListener('beforeunload', function () { liberarAudioBlob(); guarda
 document.addEventListener('visibilitychange', function () {
   // No forzar play() al volver a la pestaña: algunos navegadores consideran
   // esa llamada una nueva reproducción y puede competir con una transición.
+  diag(document.hidden ? 'app en segundo plano / pantalla bloqueada' : 'app visible otra vez');
 });
+window.addEventListener('pagehide', function () { diag('iOS cerró o suspendió la página (pagehide)'); });
+window.addEventListener('pageshow', function (e) { if (e.persisted) diag('página restaurada (pageshow)'); });
+
+/* Panel del registro (botón 🩺). */
+function textoRegistro() {
+  return 'Mi Música ' + VERSION + ' · ' + navigator.userAgent + '\n' + registro.join('\n');
+}
+$('bd').onclick = function () {
+  $('diagtxt').textContent = textoRegistro();
+  $('diag').className = 'diag ver';
+  var t = $('diagtxt'); t.scrollTop = t.scrollHeight;
+};
+$('diagcerrar').onclick = function () { $('diag').className = 'diag'; };
+$('diagborrar').onclick = function () {
+  registro = []; guardar(LOG_KEY, registro);
+  $('diagtxt').textContent = textoRegistro();
+};
+$('diagcopiar').onclick = function () {
+  var txt = textoRegistro(), b = $('diagcopiar');
+  function hecho() { b.textContent = '✔ Copiado'; setTimeout(function () { b.textContent = 'Copiar'; }, 1800); }
+  function aMano() {
+    var r = document.createRange(); r.selectNodeContents($('diagtxt'));
+    var sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(r);
+    try { if (document.execCommand('copy')) { hecho(); return; } } catch (e) {}
+    b.textContent = 'Mantén presionado y copia';
+  }
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(hecho, aMano);
+  else aMano();
+};
 document.addEventListener('keydown', function (e) {
   if (e.key === 'Escape' && $('playerFull').style.display === 'flex') { cerrarFull(); return; }
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
@@ -918,6 +1090,11 @@ window.addEventListener('appinstalled', function () { $('bi').className = 'bt oc
 (function () {
   if (navigator.serviceWorker) navigator.serviceWorker.register('sw.js')['catch'](function () {});
   audio.volume = 0.9;
+  diag('— inicio v' + VERSION + ' · ' + new Date().toLocaleDateString('es-CO') + ' · ' +
+    (navigator.standalone ? 'app instalada' : 'navegador') + ' · iPhone: ' + (ES_IOS ? 'sí' : 'no') +
+    ' · controles: ' + ('mediaSession' in navigator ? 'sí' : 'no') +
+    ' · audioSession: ' + (navigator.audioSession ? navigator.audioSession.type : 'no') +
+    ' · precarga: ' + (PRECARGAR ? 'sí' : 'no'));
 
   clave = window.API_KEY || leer(LL.clave, '') || '';
   carpeta = window.CARPETA ? sacarId(window.CARPETA) : (leer(LL.carpeta, '') || '');

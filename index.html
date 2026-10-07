@@ -24,6 +24,7 @@ footer{position:relative;border-top:1px solid var(--line);background:rgba(17,21,
 @media(max-width:650px){header{padding:11px 12px 8px}header h1{font-size:17px}.fi{padding:8px 11px}.fi select{flex:1 1 100%;}.fi input{flex:1 1 100%}#ls{padding-left:6px;padding-right:6px;padding-bottom:165px}.pi{padding:9px 8px}.nu{width:22px}.cover{width:40px;height:40px}.now{grid-template-columns:44px 1fr auto}.nowcover{width:44px;height:44px}.quick .fav{display:none}.quick #expand{display:inline-flex}.controls{margin-top:2px}.vo{display:none}footer{padding-left:10px;padding-right:10px}.mobile-hide{display:none}}
 @media(min-width:900px){footer{padding-left:24px;padding-right:24px}}
 #playerFull{position:fixed;inset:0;z-index:20;background:linear-gradient(145deg,#10151a,#080a0e);display:none;flex-direction:column;padding:calc(18px + env(safe-area-inset-top)) 22px calc(22px + env(safe-area-inset-bottom))}.pf-top{display:flex;justify-content:space-between;align-items:center;color:var(--muted)}.pf-art{width:min(76vw,430px);aspect-ratio:1;margin:auto;border-radius:26px;background:linear-gradient(145deg,#27352e,#151a21);display:grid;place-items:center;box-shadow:var(--shadow)}.pf-art svg{width:28%;opacity:.65}.pf-title{text-align:center;margin:24px auto 8px;max-width:600px}.pf-title b{font-size:22px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.pf-title span{font-size:13px;color:var(--muted)}.pf-controls{max-width:650px;width:100%;margin:10px auto 0}.pf-buttons{display:flex;justify-content:center;align-items:center;gap:12px;margin-top:7px}.pf-buttons .ico{padding:12px}.pf-buttons #pfplay{width:64px;height:64px;background:var(--text);color:#050706}.pf-buttons #pfplay svg{width:29px;height:29px}.closefull{background:var(--surface2);color:var(--text);border:1px solid var(--line);border-radius:50%;width:40px;height:40px;cursor:pointer}
+.diag{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.82);display:none;padding:calc(14px + env(safe-area-inset-top)) 12px calc(14px + env(safe-area-inset-bottom))}.diag.ver{display:flex}.diag-caja{display:flex;flex-direction:column;width:100%;max-width:900px;margin:0 auto;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px;min-height:0}.diag-top{display:flex;gap:8px;align-items:center}.diag-top b{flex:1;font-size:14px;min-width:0}#diagtxt{flex:1;min-height:0;overflow:auto;-webkit-overflow-scrolling:touch;font:11px/1.5 ui-monospace,Menlo,monospace;white-space:pre-wrap;word-break:break-word;margin:10px 0 0;color:var(--text);-webkit-user-select:text;user-select:text}
 </style>
 <link rel="stylesheet" href="y2k.css">
 </head>
@@ -68,6 +69,7 @@ footer{position:relative;border-top:1px solid var(--line);background:rgba(17,21,
   <button class="bt oculto" id="bi">⬇ Instalar</button>
   <button class="bt" id="bc">📁 Cambiar</button>
   <button class="bt" id="br" title="Volver a leer la carpeta">↻</button>
+  <button class="bt" id="bd" title="Registro de reproducción (diagnóstico)">🩺</button>
 </header>
 
 <div class="fi">
@@ -109,6 +111,18 @@ footer{position:relative;border-top:1px solid var(--line);background:rgba(17,21,
   <div class="pf-art"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 3v10.55A4 4 0 1 0 14 17V7h4V3h-6z"/></svg></div>
   <div class="pf-title"><b id="pfti">Elige una canción</b><span id="pfes"></span></div>
   <div class="pf-controls"><div class="ba"><span class="tm" id="pft1">0:00</span><span class="env"><i id="pbf"></i><input id="pfpr" type="range" min="0" max="1000" value="0" aria-label="Posición"></span><span class="tm der" id="pft2">0:00</span></div><div class="pf-buttons"><button class="ico" id="pfan">◀</button><button class="ico" id="pfm10">−10</button><button class="ico" id="pfplay">▶</button><button class="ico" id="pfd10">+10</button><button class="ico" id="pfsi">▶</button></div></div>
+</div>
+
+<div id="diag" class="diag">
+  <div class="diag-caja">
+    <div class="diag-top">
+      <b>Registro de reproducción</b>
+      <button class="bt" id="diagcopiar">Copiar</button>
+      <button class="bt" id="diagborrar">Borrar</button>
+      <button class="closefull" id="diagcerrar" title="Cerrar">×</button>
+    </div>
+    <pre id="diagtxt"></pre>
+  </div>
 </div>
 
 <script src="config.js"></script>
