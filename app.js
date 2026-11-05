@@ -46,20 +46,6 @@ function act() { return pos >= 0 && pos < or.length ? cn[or[pos]] : null; }
 function guardar(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
 function leer(k, x) { try { var v = localStorage.getItem(k); return v ? JSON.parse(v) : x; } catch (e) { return x; } }
 
-var VERSION = '2.6.6';
-var LOG_KEY = 'mus_diag';
-var registro = leer(LOG_KEY, []);
-if (!Array.isArray(registro)) registro = [];
-function diag(msg) {
-  try {
-    var d = new Date(), ms = String(d.getMilliseconds());
-    while (ms.length < 3) ms = '0' + ms;
-    registro.push(d.toTimeString().slice(0, 8) + '.' + ms + (document.hidden ? ' 🔒 ' : '    ') + msg);
-    if (registro.length > 300) registro.splice(0, registro.length - 300);
-    guardar(LOG_KEY, registro);
-  } catch (e) {}
-}
-
 function sacarId(texto) {
   var t = String(texto || '').trim();
   if (!t) return '';
@@ -225,7 +211,7 @@ function llenarFiltro() {
   var h = '<option value="">Todas las carpetas</option>';
   Object.keys(cu).sort().forEach(function (r) {
     var niv = r.split(' / ').length - 1, san = '';
-    for (var i = 0; i < niv; i++) san += '   ';
+    for (var i = 0; i < niv; i++) san += '   ';
     h += '<option value="' + esc(r) + '">' + san + (niv ? '└ ' : '') + esc(r.split(' / ').pop()) + ' (' + cu[r] + ')</option>';
   });
   $('fc').innerHTML = h;
@@ -437,7 +423,6 @@ function precargar() {
       b = new Blob([b], { type: s.m || 'audio/mpeg' });  
     }
     cacheAudio[id] = { url: URL.createObjectURL(b), mb: b.size / 1048576 };
-    diag('precargada: ' + s.n);
   })['catch'](function (e) {
     if (e && e.name === 'AbortError') return;
     precargaFallo[id] = Date.now();
@@ -838,7 +823,11 @@ audio.addEventListener('waiting', function () {
   }
 });
 
-audio.addEventListener('ended', function () { sig(true); });
+// AQUI SE CORRIGIO EL ERROR DE NO SEGUIR REPRODUCIENDO AUTOMATICAMENTE
+audio.addEventListener('ended', function () { 
+    // Al terminar, le decimos explicitamente al navegador que llame a la funcion de la siguiente cancion, enviando TRUE de "paso automatico"
+    sig(true); 
+});
 
 audio.addEventListener('play', function () {
   deberia = true;
@@ -879,6 +868,14 @@ audio.addEventListener('error', function () {
 });
 
 window.addEventListener('beforeunload', function () { liberarAudioBlob(); guardarSesion(); });
+
+// Fundamental para recuperar el control de los audífonos si el celular fue a otra app (Llamadas)
+document.addEventListener('visibilitychange', function () {
+  if (!document.hidden && audio.paused && act()) {
+     mediaInfo(act());
+     try { navigator.mediaSession.playbackState = 'paused'; } catch(e){}
+  }
+});
 
 document.addEventListener('keydown', function (e) {
   if (e.key === 'Escape' && $('playerFull').style.display === 'flex') { cerrarFull(); return; }
