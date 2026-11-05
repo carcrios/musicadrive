@@ -5,7 +5,7 @@
    version nueva a GitHub Pages, la app la usa al abrirse (antes seguia
    mostrando la copia vieja). Sin conexion abre con la copia guardada. */
 
-const CACHE = 'mi-musica-2.6.6';
+const CACHE = 'mi-musica-aero-v1';
 const BASE = new URL('./', self.location).pathname;
 const CONCHA = [BASE, BASE + 'index.html', BASE + 'app.js', BASE + 'config.js', BASE + 'y2k.css',
                 BASE + 'manifest.webmanifest', BASE + 'icon-192.png', BASE + 'icon-512.png'];

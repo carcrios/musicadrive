@@ -1,9 +1,6 @@
 /* =========================================================
    MI MUSICA  ·  version simple
    Carpeta publica + clave de API. Sin iniciar sesion.
-   El navegador le pide el audio a Google directamente, asi que
-   la reproduccion es nativa: arranca rapido, salta al instante
-   y sigue sonando con la pantalla apagada.
    ========================================================= */
 'use strict';
 
@@ -588,15 +585,14 @@ function controlesBloqueo() {
   
   mh('play', function () {
     deberia = true;
-    if (!audio.src || audio.error) { if (or.length) tocar(pos >= 0 ? pos : 0); return; }
-    
-    // Auto-recuperacion si la conexion se cayo en la llamada
-    if (audio.readyState === 0 && audio.src) {
-      var t = audio.currentTime; audio.load(); audio.currentTime = t;
+    if (!audio.src || audio.error || audio.readyState === 0) { 
+      if (or.length) { pendiente = audio.currentTime || 0; tocar(pos >= 0 ? pos : 0); }
+      return; 
     }
-    
     var pr = audio.play();
-    if (pr && pr['catch']) pr['catch'](function (e) {});
+    if (pr && pr['catch']) pr['catch'](function (e) {
+      if (or.length) { pendiente = audio.currentTime || 0; tocar(pos >= 0 ? pos : 0); }
+    });
   });
   
   mh('pause', function () { deberia = false; audio.pause(); });
@@ -621,9 +617,7 @@ function controlesBloqueo() {
 
 function mediaInfo(s) {
   if (!('mediaSession' in navigator)) return;
-  
   controlesBloqueo(); // Re-vincular los controles del sistema siempre
-  
   var g = tags[s.id] || {};
   try {
     navigator.mediaSession.metadata = new MediaMetadata({
@@ -754,12 +748,19 @@ $('pfpr').addEventListener('input',function(){if(isFinite(audio.duration))audio.
 $('pl').onclick = function () {
   if (!or.length) return;
   if (pos < 0) { tocar(0); return; }
-  if (!audio.src || audio.error) { tocar(pos); return; }
+  if (!audio.src || audio.error || audio.readyState === 0) { 
+    pendiente = audio.currentTime || 0;
+    tocar(pos); 
+    return; 
+  }
   
   if (audio.paused) { 
     deberia = true; 
-    if (audio.readyState === 0 && audio.src) { var t = audio.currentTime; audio.load(); audio.currentTime = t; }
-    var pr = audio.play(); if (pr && pr['catch']) pr['catch'](function () {}); 
+    var pr = audio.play(); 
+    if (pr && pr['catch']) pr['catch'](function (e) {
+        pendiente = audio.currentTime || 0;
+        tocar(pos);
+    }); 
   } 
   else { deberia = false; audio.pause(); }
 };
@@ -829,11 +830,11 @@ audio.addEventListener('waiting', function () {
   if (deberia && !recoveryTimer) {
     recoveryTimer = setTimeout(function() {
       if (deberia && (audio.paused || audio.readyState < 3)) {
-        var t = audio.currentTime; audio.load(); audio.currentTime = t;
-        var pr = audio.play(); if (pr && pr['catch']) pr['catch'](function(){});
+        pendiente = audio.currentTime || 0;
+        tocar(pos);
       }
       recoveryTimer = null;
-    }, 3000); // 3 segundos es mejor UX para recargar
+    }, 3000); 
   }
 });
 
@@ -851,24 +852,33 @@ audio.addEventListener('pause', function () {
   $('i1').style.display = ''; $('i2').style.display = 'none';
   try { navigator.mediaSession.playbackState = 'paused'; } catch (e) {}
   guardarSesion(); actualizarFull();
+  if (act()) {
+      var s = act();
+      var g = tags[s.id] || {};
+      try {
+          navigator.mediaSession.metadata = new MediaMetadata({
+              title: g.t || s.n,
+              artist: g.a || 'Google Drive',
+              album: g.b || s.c || 'Mi Música',
+              artwork: [{ src: 'icon-192.png', sizes: '192x192', type: 'image/png' }]
+          });
+      } catch(e){}
+  }
 });
 
 audio.addEventListener('error', function () {
   if (!audio.src || cargando) return;
+  if (deberia && audio.currentTime > 0) {
+      pendiente = audio.currentTime || 0;
+      tocar(pos);
+      return;
+  }
   var mediaError = audio.error; var code = mediaError ? mediaError.code : 0;
   if (code === 1) return;
   est('No se pudo reproducir el archivo.');
 });
 
 window.addEventListener('beforeunload', function () { liberarAudioBlob(); guardarSesion(); });
-
-// Fundamental para recuperar el control de los audífonos si el celular fue a otra app (Llamadas)
-document.addEventListener('visibilitychange', function () {
-  if (!document.hidden && audio.paused && act()) {
-     mediaInfo(act());
-     try { navigator.mediaSession.playbackState = 'paused'; } catch(e){}
-  }
-});
 
 document.addEventListener('keydown', function (e) {
   if (e.key === 'Escape' && $('playerFull').style.display === 'flex') { cerrarFull(); return; }
