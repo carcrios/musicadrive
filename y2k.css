@@ -1,241 +1,281 @@
 /* =====================================================================
-   Y2K HARDWARE PLAYER (WINAMP / WALKMAN VIBES)
-   Soluciona el lag de scroll, mejora los botones físicos táctiles y 
-   da un look 100% de hardware de los años 2000s
+   AERO GLASS Y2K PLAYER
+   Estilo transparente, limpio, brillante y elegante (Windows Vista / Mac OS X 2005)
    ===================================================================== */
 :root {
-  --y2k-bg: #000000;
-  --y2k-chrome: linear-gradient(180deg, #e4e9f0 0%, #b8c6d6 45%, #90a1b5 50%, #c5d3e0 100%);
-  --y2k-dark-chrome: linear-gradient(180deg, #3a4047 0%, #20242a 45%, #13161a 50%, #2a3038 100%);
-  --y2k-lcd-bg: #091a13;
-  --y2k-lcd-text: #39ff14; /* Neon green */
-  --y2k-accent: #ff00ff;
+  --aero-bg: #d9e6f2; /* Azul muy claro pastel de fondo */
+  --aero-glass-header: rgba(240, 248, 255, 0.45);
+  --aero-glass-panel: rgba(255, 255, 255, 0.55);
+  --aero-glass-footer: rgba(230, 240, 250, 0.65);
+  
+  --aero-border-light: rgba(255, 255, 255, 0.8);
+  --aero-border-dark: rgba(140, 170, 200, 0.4);
+  
+  --aero-text-main: #2a3b50;
+  --aero-text-muted: #5a738c;
+  --aero-accent: #0078d7;
+  
+  --aero-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+  --aero-highlight: inset 0 1px 0 rgba(255, 255, 255, 1), inset 0 20px 20px -20px rgba(255, 255, 255, 0.8);
 }
 
 body {
-  background: var(--y2k-bg);
-  background-image: repeating-linear-gradient(0deg, rgba(255,255,255,0.03) 0px, rgba(255,255,255,0.03) 1px, transparent 1px, transparent 3px);
-  color: #b0c4de;
+  background: var(--aero-bg) url('data:image/svg+xml;utf8,<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><path d="M0 100 C 20 0 50 0 100 100 Z" fill="rgba(255,255,255,0.3)"/></svg>') no-repeat center center fixed;
+  background-size: cover;
+  color: var(--aero-text-main);
   user-select: none;
   -webkit-tap-highlight-color: transparent;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+/* Efecto de burbujas/resplandor suave de fondo */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(circle at 15% 50%, rgba(255, 255, 255, 0.4), transparent 25%),
+              radial-gradient(circle at 85% 30%, rgba(135, 206, 250, 0.4), transparent 30%);
+  pointer-events: none;
+  z-index: 0;
 }
 
-/* BARRA SUPERIOR - TIPO CHROME */
+/* BARRA SUPERIOR - EFECTO CRISTAL (Frutiger Aero) */
 header {
-  background: var(--y2k-dark-chrome) !important;
-  border-bottom: 2px solid #5a6b7c !important;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.8), inset 0 1px 1px rgba(255,255,255,0.2) !important;
+  background: var(--aero-glass-header) !important;
+  backdrop-filter: blur(12px) saturate(150%);
+  -webkit-backdrop-filter: blur(12px) saturate(150%);
+  border-bottom: 1px solid var(--aero-border-light) !important;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05), var(--aero-highlight) !important;
+  color: var(--aero-text-main) !important;
 }
 header h1 {
-  font-family: "Impact", sans-serif !important;
-  font-style: italic;
-  letter-spacing: 2px !important;
-  color: #fff !important;
-  text-shadow: 2px 2px 0px #000, 0 0 10px rgba(255,255,255,0.5) !important;
+  font-family: "Trebuchet MS", "Lucida Sans Unicode", sans-serif !important;
+  font-weight: normal;
+  letter-spacing: 0px !important;
+  color: #1a4266 !important;
+  text-shadow: 0 1px 0 rgba(255,255,255,0.8) !important;
 }
-header h1::before { content: "💿 "; }
 
-#ct { color: #aaa !important; font-family: "Courier New", monospace !important; font-weight: bold; }
+#ct { color: var(--aero-text-muted) !important; font-size: 11px !important; font-weight: normal; text-shadow: 0 1px 0 rgba(255,255,255,0.8); }
 
-/* FILTROS Y BUSQUEDA */
+/* BOTONES GLOBALES TIPO AQUA / AERO */
+.bt, .ico {
+  background: linear-gradient(180deg, #ffffff 0%, #e0ebf5 45%, #d1e0f0 50%, #e8f1f8 100%) !important;
+  border: 1px solid rgba(160, 180, 200, 0.8) !important;
+  color: var(--aero-text-main) !important;
+  border-radius: 20px !important; /* Bordes muy redondeados tipo Aqua */
+  box-shadow: 0 2px 4px rgba(0,0,0,0.08), inset 0 1px 2px rgba(255,255,255,1) !important;
+  text-shadow: 0 1px 0 rgba(255,255,255,0.8);
+  font-weight: 500;
+  transition: all 0.1s ease;
+}
+.bt:active, .ico:active {
+  background: linear-gradient(180deg, #d1e0f0 0%, #c2d4e8 100%) !important;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.1) !important;
+  border-color: #8c9fb5 !important;
+  transform: scale(0.98);
+}
+.bt:hover, .ico:hover {
+  border-color: #85b0d6 !important;
+  box-shadow: 0 2px 6px rgba(0,120,215,0.2), inset 0 1px 2px rgba(255,255,255,1) !important;
+}
+
+/* FILTROS Y BÚSQUEDA */
 .fi {
-  background: #111 !important;
-  border-bottom: 1px solid #333 !important;
+  background: rgba(255, 255, 255, 0.3) !important;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--aero-border-light) !important;
 }
 .fi input, .fi select {
-  background: #000 !important;
-  border: 2px inset #555 !important;
-  color: #0ff !important;
-  font-family: "Courier New", monospace !important;
-  border-radius: 4px !important;
+  background: rgba(255, 255, 255, 0.6) !important;
+  border: 1px solid rgba(160, 180, 200, 0.6) !important;
+  color: var(--aero-text-main) !important;
+  border-radius: 12px !important;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.03), 0 1px 0 rgba(255,255,255,0.8) !important;
 }
 .fi input:focus, .fi select:focus {
-  border-color: #0ff !important;
-  box-shadow: 0 0 8px #0ff !important;
+  background: #ffffff !important;
+  border-color: #66afe9 !important;
+  box-shadow: inset 0 1px 1px rgba(0,0,0,0.075), 0 0 8px rgba(102,175,233,0.6) !important;
+  outline: none;
 }
+.fi input::placeholder { color: #8fa5ba !important; }
 
-/* LISTA DE CANCIONES (Cero Lag - Adiós a los gradientes radiales pesados) */
+/* LISTA DE CANCIONES - LIMPIA Y FLUIDA */
 #ls {
   scrollbar-width: thin;
-  scrollbar-color: #0ff #111;
+  scrollbar-color: rgba(140, 170, 200, 0.5) transparent;
 }
-#ls::-webkit-scrollbar { width: 8px; }
-#ls::-webkit-scrollbar-track { background: #111; border-left: 1px solid #333; }
-#ls::-webkit-scrollbar-thumb { background: var(--y2k-dark-chrome); border: 1px outset #666; }
+#ls::-webkit-scrollbar { width: 6px; }
+#ls::-webkit-scrollbar-track { background: transparent; }
+#ls::-webkit-scrollbar-thumb { background: rgba(140, 170, 200, 0.5); border-radius: 10px; }
+
+.sectionbar { color: var(--aero-text-muted) !important; font-weight: bold; text-shadow: 0 1px 0 rgba(255,255,255,0.8); }
 
 .pi {
-  border-radius: 4px !important;
-  margin-bottom: 4px !important;
-  background: #151515 !important;
-  border: 1px solid #222 !important;
-  transition: none !important; /* Desactivar animaciones pesadas para evitar lag */
+  border-radius: 10px !important;
+  margin-bottom: 2px !important;
+  background: rgba(255, 255, 255, 0.2) !important; /* Blanco translúcido suave */
+  border: 1px solid transparent !important;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+  /* Sin transiciones pesadas de fondo para no dar lag, solo borde/opacidad */
+  transition: border-color 0.1s;
+}
+.pi:hover {
+  background: rgba(255, 255, 255, 0.4) !important;
+  border-color: rgba(255, 255, 255, 0.8) !important;
 }
 .pi:active {
-  background: #0ff !important;
-  color: #000 !important;
+  background: rgba(200, 220, 240, 0.6) !important;
 }
 .pi.ac {
-  background: #0033aa !important; /* Azul Windows 98 */
-  border-color: #0055ff !important;
-  box-shadow: inset 0 0 5px rgba(0,0,0,0.5) !important;
+  background: linear-gradient(90deg, rgba(230, 245, 255, 0.8), rgba(255, 255, 255, 0.5)) !important;
+  border-color: rgba(135, 206, 250, 0.6) !important;
+  box-shadow: inset 4px 0 var(--aero-accent), 0 2px 8px rgba(0,0,0,0.05) !important;
 }
-.pi.ac .nm {
-  color: #fff !important;
-  font-weight: bold;
-}
-.pi .cover {
-  border-radius: 2px !important;
-  border: 1px inset #555 !important;
-  background: #000 !important;
-  box-shadow: none !important;
-}
+.pi .nm { color: var(--aero-text-main) !important; font-weight: 600; text-shadow: 0 1px 0 rgba(255,255,255,0.8); }
+.pi .sb { color: var(--aero-text-muted) !important; }
+.pi.ac .nm { color: #005a9e !important; } /* Azul más oscuro para el texto activo */
 
-/* REPRODUCTOR FLOTANTE TIPO WINAMP */
+/* Covers minimalistas */
+.cover, .nowcover {
+  border: 1px solid rgba(255, 255, 255, 0.8) !important;
+  background: linear-gradient(135deg, #f0f5fa, #dce6f0) !important;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.06), inset 0 2px 3px rgba(255,255,255,1);
+  border-radius: 8px !important;
+}
+.cover svg, .nowcover svg { fill: #8da4be; opacity: 1 !important; }
+.pi.ac .cover svg { fill: var(--aero-accent); }
+
+/* REPRODUCTOR INFERIOR - AERO GLASS */
 footer {
-  background: var(--y2k-dark-chrome) !important;
-  border-top: 2px outset #6a7b8c !important;
-  box-shadow: 0 -5px 20px rgba(0,0,0,0.8), inset 0 1px 2px rgba(255,255,255,0.3) !important;
+  background: var(--aero-glass-footer) !important;
+  backdrop-filter: blur(15px) saturate(120%);
+  -webkit-backdrop-filter: blur(15px) saturate(120%);
+  border-top: 1px solid var(--aero-border-light) !important;
+  box-shadow: 0 -4px 15px rgba(0,0,0,0.05), inset 0 1px 0 rgba(255, 255, 255, 0.8) !important;
   padding: 10px 10px 20px 10px !important;
 }
 
-/* PANTALLA LCD (NOW PLAYING) */
-.now {
-  background: var(--y2k-lcd-bg) !important;
-  border: 3px inset #334433 !important;
-  border-radius: 4px !important;
-  padding: 8px !important;
-  box-shadow: inset 0 0 15px rgba(0,0,0,0.8) !important;
-  margin-bottom: 8px !important;
-  position: relative;
-  overflow: hidden; /* Necesario para la animación marque */
-}
 #ti {
-  color: var(--y2k-lcd-text) !important;
-  font-family: "Courier New", monospace !important;
-  font-weight: bold !important;
-  text-transform: uppercase;
-  text-shadow: 0 0 6px rgba(57,255,20,0.6) !important;
-  /* Animación tipo Marquee en puro CSS */
-  display: inline-block;
-  white-space: nowrap;
-  animation: y2k-marquee 8s linear infinite;
-  min-width: 100%;
+  color: var(--aero-text-main) !important;
+  font-weight: 600 !important;
+  font-size: 15px !important;
+  text-shadow: 0 1px 0 rgba(255,255,255,0.8);
 }
-@keyframes y2k-marquee {
-  0% { transform: translateX(80%); }
-  100% { transform: translateX(-120%); }
-}
-#es {
-  color: #1b8a0b !important; /* Verde oscuro LCD */
-  font-family: "Courier New", monospace !important;
-  font-weight: bold;
-}
-.nowcover { display: none !important; } /* Ocultar cover en footer para que parezca LCD puro */
+#es { color: var(--aero-text-muted) !important; font-size: 12px !important; text-shadow: 0 1px 0 rgba(255,255,255,0.8); }
 
-/* BOTONES HARDWARE (Físicos) */
-.ico, .bt {
-  background: var(--y2k-chrome) !important;
-  border: 2px outset #fff !important;
-  color: #000 !important;
-  border-radius: 5px !important;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.4) !important;
-  font-family: "Arial", sans-serif !important;
-  font-weight: bold;
-}
-.ico:active, .bt:active {
-  border: 2px inset #fff !important;
-  background: #c5d3e0 !important;
-  transform: translateY(2px);
-  box-shadow: none !important;
-}
+/* BOTÓN PLAY GRANDE (Estilo Orbe Glass) */
 #pl {
+  width: 58px !important;
+  height: 58px !important;
   border-radius: 50% !important;
-  border: 3px outset #fff !important;
-  background: radial-gradient(circle at 30% 30%, #ff8888 0%, #ff0000 50%, #880000 100%) !important; /* Boton Play Rojo Y2K */
+  background: linear-gradient(180deg, #66b3ff 0%, #0078d7 50%, #005a9e 100%) !important;
+  border: 2px solid rgba(255, 255, 255, 0.9) !important;
   color: #fff !important;
-  width: 54px !important;
-  height: 54px !important;
+  box-shadow: 0 4px 10px rgba(0, 120, 215, 0.3), inset 0 4px 8px rgba(255, 255, 255, 0.6), inset 0 -4px 8px rgba(0, 0, 0, 0.2) !important;
+  text-shadow: none;
 }
 #pl:active {
-  border: 3px inset #fff !important;
-  background: #cc0000 !important;
+  background: linear-gradient(180deg, #005a9e 0%, #004578 100%) !important;
+  box-shadow: inset 0 4px 8px rgba(0, 0, 0, 0.3) !important;
 }
-.md.on {
-  color: #000 !important;
-  background: #0ff !important;
-  box-shadow: 0 0 10px #0ff !important;
-}
+#pl svg { fill: #fff !important; }
 
-/* BARRA DE PROGRESO */
-.ba { margin-top: 5px !important; }
-.tm { font-family: "Courier New", monospace !important; color: #39ff14 !important; background: #000 !important; padding: 2px 4px !important; border: 1px inset #555 !important; border-radius: 3px !important; font-size: 10px !important; }
+/* Controles secundarios y texto activo */
+.controls { gap: 10px !important; }
+.md.on { color: var(--aero-accent) !important; }
+.fav.on { color: #ff3b30 !important; }
+.sa { color: #8c9eb0 !important; }
+
+/* BARRA DE PROGRESO - AERO */
+.tm { color: var(--aero-text-muted) !important; font-size: 11px !important; font-weight: 500; text-shadow: 0 1px 0 rgba(255,255,255,0.8); }
 input[type=range] {
   -webkit-appearance: none;
-  background: #000 !important;
-  border: 2px inset #444 !important;
-  height: 14px !important;
-  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.5) !important;
+  border: 1px solid rgba(160, 180, 200, 0.5) !important;
+  height: 8px !important;
+  border-radius: 4px;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.05), 0 1px 0 rgba(255,255,255,0.8) !important;
 }
 input[type=range]::-webkit-slider-thumb {
   -webkit-appearance: none;
-  width: 18px;
-  height: 18px;
-  background: var(--y2k-chrome);
-  border: 2px outset #fff;
+  width: 16px;
+  height: 16px;
+  background: linear-gradient(180deg, #ffffff 0%, #e0ebf5 100%);
+  border: 1px solid #8c9fb5;
   border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.15), inset 0 1px 1px rgba(255,255,255,1);
 }
 #bf {
-  background: #00ff00 !important; /* Buffer verde sólido */
+  background: linear-gradient(90deg, rgba(135,206,250,0.6), rgba(100,149,237,0.6)) !important;
   height: 6px !important;
   top: 50%;
   margin-top: -3px;
+  border-radius: 3px;
   box-shadow: none !important;
 }
 
-/* REPRODUCTOR FULLSCREEN (PANTALLA COMPLETA) */
+/* REPRODUCTOR FULLSCREEN - CRISTAL ESMERILADO */
 #playerFull {
-  background: #000 !important;
-  background-image: repeating-linear-gradient(0deg, rgba(255,255,255,0.03) 0px, rgba(255,255,255,0.03) 1px, transparent 1px, transparent 3px) !important;
+  background: rgba(217, 230, 242, 0.85) !important; /* Base translúcida */
+  backdrop-filter: blur(25px) saturate(150%);
+  -webkit-backdrop-filter: blur(25px) saturate(150%);
+  color: var(--aero-text-main) !important;
 }
 .pf-top {
-  background: var(--y2k-dark-chrome) !important;
-  border: 2px outset #555 !important;
-  color: #fff !important;
-  text-shadow: 1px 1px 0 #000 !important;
+  background: transparent !important;
+  border-bottom: none !important;
+  box-shadow: none !important;
+  color: var(--aero-text-muted) !important;
+  text-shadow: 0 1px 0 rgba(255,255,255,0.8);
 }
 .closefull {
-  background: #ff0000 !important;
-  border: 2px outset #ffaaaa !important;
-  color: #fff !important;
-  font-weight: bold;
+  background: rgba(255, 255, 255, 0.5) !important;
+  border: 1px solid rgba(180, 190, 200, 0.5) !important;
+  color: #555 !important;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
 }
+
+/* Cover en Fullscreen: Estilo carátula de iTunes Cover Flow */
 .pf-art {
-  border-radius: 0 !important;
-  border: 10px inset #333 !important;
-  background: #000 !important;
-  box-shadow: 0 0 20px #0ff !important;
+  border-radius: 12px !important; /* Cuadrado con bordes curvos, no circular */
+  border: 4px solid rgba(255, 255, 255, 0.9) !important;
+  background: linear-gradient(135deg, #f5f8fa, #e1e8ef) !important;
+  box-shadow: 0 15px 35px rgba(0,0,0,0.1), 0 5px 15px rgba(0,0,0,0.05), inset 0 2px 10px rgba(255,255,255,1) !important;
 }
-.pf-art::before { display: none !important; }
-.pf-art::after { display: none !important; }
+.pf-art::before, .pf-art::after { display: none !important; }
+.pf-art svg {
+  display: block !important;
+  width: 35% !important;
+  fill: #a2b8cc;
+  filter: drop-shadow(0 4px 6px rgba(0,0,0,0.05));
+}
 
 .pf-title {
-  background: var(--y2k-lcd-bg) !important;
-  border: 4px inset #444 !important;
-  box-shadow: inset 0 0 20px #000 !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
 }
 .pf-title b {
-  color: var(--y2k-lcd-text) !important;
-  font-family: "Courier New", monospace !important;
-  text-shadow: 0 0 8px #39ff14 !important;
+  color: var(--aero-text-main) !important;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+  font-size: clamp(22px, 5vw, 28px) !important;
+  text-shadow: 0 1px 0 rgba(255,255,255,0.8) !important;
+  font-weight: 700;
 }
-.pf-title span { color: #1b8a0b !important; }
+.pf-title span { color: var(--aero-text-muted) !important; font-size: 15px !important; text-shadow: 0 1px 0 rgba(255,255,255,0.8); }
 
 .pf-controls {
-  background: var(--y2k-dark-chrome) !important;
-  border: 3px outset #666 !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+  border: 1px solid rgba(255, 255, 255, 0.6) !important;
+  border-radius: 20px !important;
+  box-shadow: 0 8px 25px rgba(0,0,0,0.05), inset 0 1px 0 rgba(255,255,255,0.8) !important;
 }
 
 @media(max-width:650px){
-    .pf-buttons .ico{width: 48px !important; height: 40px !important;}
-    .pf-buttons #pfplay{width: 60px !important; height: 60px !important;}
+    .pf-buttons .ico{width: 48px !important; height: 48px !important;}
+    .pf-buttons #pfplay{width: 64px !important; height: 64px !important;}
+    .pf-art{width: min(80vw, 320px) !important; margin-top: 40px !important;}
 }
