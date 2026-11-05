@@ -1,11 +1,6 @@
-/* Service worker: solo para que la app se instale y abra sin conexion.
-   El audio NO pasa por aqui: el navegador se lo pide a Google directamente.
+/* Service worker: solo para que la app se instale y abra sin conexion. */
 
-   v2.6.5+: primero la red, despues la copia guardada. Asi, al subir una
-   version nueva a GitHub Pages, la app la usa al abrirse (antes seguia
-   mostrando la copia vieja). Sin conexion abre con la copia guardada. */
-
-const CACHE = 'mi-musica-aero-v1';
+const CACHE = 'mi-musica-aero-v2';
 const BASE = new URL('./', self.location).pathname;
 const CONCHA = [BASE, BASE + 'index.html', BASE + 'app.js', BASE + 'config.js', BASE + 'y2k.css',
                 BASE + 'manifest.webmanifest', BASE + 'icon-192.png', BASE + 'icon-512.png'];
