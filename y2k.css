@@ -1,356 +1,241 @@
 /* =====================================================================
-   Y2K REFERENCE PLAYER — SOLO CAPA VISUAL
-   Basado en la referencia cromada/neón. NO modifica JavaScript.
+   Y2K HARDWARE PLAYER (WINAMP / WALKMAN VIBES)
+   Soluciona el lag de scroll, mejora los botones físicos táctiles y 
+   da un look 100% de hardware de los años 2000s
    ===================================================================== */
-:root{
-  --y2k-bg:#050914;
-  --y2k-panel:#101b2b;
-  --y2k-panel2:#17263a;
-  --y2k-glass:rgba(18,35,54,.82);
-  --y2k-line:rgba(151,224,255,.34);
-  --y2k-text:#f4fbff;
-  --y2k-muted:#8fa6bb;
-  --y2k-cyan:#62f7ff;
-  --y2k-pink:#ff58dd;
-  --y2k-lime:#c8ff4d;
-  --y2k-chrome1:#ffffff;
-  --y2k-chrome2:#b7c7d5;
-  --y2k-chrome3:#516276;
-  --y2k-shadow:0 24px 70px rgba(0,0,0,.55), 0 0 34px rgba(72,236,255,.08);
+:root {
+  --y2k-bg: #000000;
+  --y2k-chrome: linear-gradient(180deg, #e4e9f0 0%, #b8c6d6 45%, #90a1b5 50%, #c5d3e0 100%);
+  --y2k-dark-chrome: linear-gradient(180deg, #3a4047 0%, #20242a 45%, #13161a 50%, #2a3038 100%);
+  --y2k-lcd-bg: #091a13;
+  --y2k-lcd-text: #39ff14; /* Neon green */
+  --y2k-accent: #ff00ff;
 }
 
-html,body{
-  background:
-    radial-gradient(900px 500px at 50% -120px, rgba(255,88,221,.14), transparent 62%),
-    radial-gradient(820px 520px at 100% 35%, rgba(98,247,255,.12), transparent 64%),
-    linear-gradient(155deg,#070c14 0%,#04070d 58%,#0a0613 100%) !important;
-}
-body::before{
-  content:"";
-  position:fixed;
-  inset:0;
-  pointer-events:none;
-  z-index:0;
-  opacity:.17;
-  background:
-    repeating-linear-gradient(0deg,rgba(255,255,255,.045) 0 1px,transparent 1px 4px),
-    linear-gradient(115deg,transparent 0 40%,rgba(98,247,255,.08) 46%,transparent 53%);
-  mix-blend-mode:screen;
+body {
+  background: var(--y2k-bg);
+  background-image: repeating-linear-gradient(0deg, rgba(255,255,255,0.03) 0px, rgba(255,255,255,0.03) 1px, transparent 1px, transparent 3px);
+  color: #b0c4de;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
-/* ---------- barra superior ---------- */
-header{
-  position:relative;
-  z-index:3;
-  min-height:62px;
-  padding:10px 18px !important;
-  border-bottom:1px solid rgba(98,247,255,.26) !important;
-  background:linear-gradient(180deg,rgba(12,27,42,.96),rgba(6,12,22,.92)) !important;
-  box-shadow:0 10px 34px rgba(0,0,0,.28), inset 0 -1px rgba(255,88,221,.14);
+/* BARRA SUPERIOR - TIPO CHROME */
+header {
+  background: var(--y2k-dark-chrome) !important;
+  border-bottom: 2px solid #5a6b7c !important;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.8), inset 0 1px 1px rgba(255,255,255,0.2) !important;
 }
-header h1{
-  font-family:"Arial Black",Impact,sans-serif;
-  text-transform:uppercase;
-  letter-spacing:.08em !important;
-  font-size:15px !important;
-  color:#ecfbff;
-  text-shadow:0 0 9px rgba(98,247,255,.46),0 0 22px rgba(255,88,221,.15);
+header h1 {
+  font-family: "Impact", sans-serif !important;
+  font-style: italic;
+  letter-spacing: 2px !important;
+  color: #fff !important;
+  text-shadow: 2px 2px 0px #000, 0 0 10px rgba(255,255,255,0.5) !important;
 }
-header h1::before{content:"Y2K ✦ "; color:var(--y2k-pink)}
-#ct{color:#82ecf4 !important; font-family:"Courier New",monospace; letter-spacing:.08em}
-.bt{
-  border:1px solid rgba(169,232,255,.25) !important;
-  background:linear-gradient(180deg,rgba(53,74,95,.70),rgba(11,21,33,.92)) !important;
-  color:#eef8ff !important;
-  border-radius:10px !important;
-  box-shadow:inset 0 1px rgba(255,255,255,.11),0 7px 20px rgba(0,0,0,.16);
-}
-.bt:hover{border-color:var(--y2k-cyan) !important;color:#fff !important;box-shadow:0 0 18px rgba(98,247,255,.14)}
+header h1::before { content: "💿 "; }
 
-/* ---------- filtros / biblioteca ---------- */
-.fi{
-  position:relative; z-index:2;
-  padding:10px 16px !important;
-  background:linear-gradient(180deg,rgba(9,19,30,.92),rgba(6,13,22,.75)) !important;
-  border-bottom:1px solid rgba(255,88,221,.12);
-}
-.fi select,.fi input,.campo,details{
-  border:1px solid rgba(133,218,255,.26) !important;
-  background:linear-gradient(180deg,rgba(28,49,69,.83),rgba(9,18,29,.94)) !important;
-  color:#f4fbff !important;
-  box-shadow:inset 0 1px rgba(255,255,255,.08),0 8px 22px rgba(0,0,0,.14);
-}
-.fi input::placeholder{color:#708ca4}
-.fi input:focus,.fi select:focus{border-color:var(--y2k-cyan) !important;box-shadow:0 0 0 3px rgba(98,247,255,.08),0 0 22px rgba(98,247,255,.09) !important}
-#ls{position:relative;z-index:1}
-.sectionbar{color:#83edf6 !important; text-transform:uppercase; letter-spacing:.13em; font-family:"Courier New",monospace}
-.pi{
-  border:1px solid transparent;
-  border-radius:12px !important;
-  background:linear-gradient(180deg,rgba(17,31,46,.44),rgba(9,18,29,.18)) !important;
-}
-.pi:hover{
-  background:linear-gradient(90deg,rgba(98,247,255,.10),rgba(255,88,221,.07)) !important;
-  border-color:rgba(125,225,255,.18);
-}
-.pi.ac{
-  background:linear-gradient(90deg,rgba(98,247,255,.14),rgba(255,88,221,.10)) !important;
-  box-shadow:inset 4px 0 var(--y2k-cyan),0 0 20px rgba(98,247,255,.07) !important;
-}
-.pi.ac .nm{color:#f6ffff !important; text-shadow:0 0 9px rgba(98,247,255,.28)}
-.cover,.nowcover{
-  border:1px solid rgba(255,255,255,.18) !important;
-  background:linear-gradient(145deg,#5f6f81,#172130 48%,#4c2358) !important;
-  box-shadow:inset 0 1px rgba(255,255,255,.18),0 8px 20px rgba(0,0,0,.28);
-}
-.fav.on{color:var(--y2k-pink) !important;text-shadow:0 0 10px rgba(255,88,221,.5)}
+#ct { color: #aaa !important; font-family: "Courier New", monospace !important; font-weight: bold; }
 
-/* ---------- reproductor inferior ---------- */
-footer{
-  position:relative;
-  z-index:5;
-  border-top:1px solid rgba(98,247,255,.28) !important;
-  background:linear-gradient(180deg,rgba(12,24,38,.98),rgba(5,10,18,.98)) !important;
-  box-shadow:0 -22px 60px rgba(0,0,0,.40), inset 0 1px rgba(255,255,255,.08);
+/* FILTROS Y BUSQUEDA */
+.fi {
+  background: #111 !important;
+  border-bottom: 1px solid #333 !important;
 }
-footer::before{
-  content:"Y2K DIGITAL AUDIO  •  GOOD MUSIC + BETTER DAYS";
-  display:block;
-  max-width:900px;
-  margin:0 auto 6px;
-  color:rgba(117,233,244,.46);
-  font:700 8px/1.1 "Courier New",monospace;
-  letter-spacing:.18em;
-  text-align:center;
+.fi input, .fi select {
+  background: #000 !important;
+  border: 2px inset #555 !important;
+  color: #0ff !important;
+  font-family: "Courier New", monospace !important;
+  border-radius: 4px !important;
 }
-.nowcover{
-  border-radius:12px !important;
-}
-#ti{color:#f4fbff; text-shadow:0 0 12px rgba(98,247,255,.18)}
-#es{color:#8fc2d6 !important}
-.controls{gap:7px !important}
-.ico{
-  border:1px solid rgba(179,229,255,.15) !important;
-  background:linear-gradient(180deg,rgba(65,81,101,.70),rgba(14,26,40,.96)) !important;
-  color:#f1fbff !important;
-  box-shadow:inset 0 1px rgba(255,255,255,.12),0 5px 16px rgba(0,0,0,.22);
-}
-.ico:hover{border-color:rgba(98,247,255,.45) !important;color:#fff !important;box-shadow:0 0 18px rgba(98,247,255,.12)}
-#pl{
-  width:54px !important; height:54px !important; border-radius:50% !important;
-  background:radial-gradient(circle at 35% 28%,#fff,#e4f7fb 35%,#9eb4c0 58%,#445466 100%) !important;
-  color:#07101a !important;
-  border:1px solid #fff !important;
-  box-shadow:inset 0 1px rgba(255,255,255,.95),0 0 0 1px rgba(98,247,255,.22),0 0 28px rgba(98,247,255,.12) !important;
-}
-.md.on{color:var(--y2k-lime) !important;text-shadow:0 0 10px rgba(200,255,77,.5)}
-.sa{color:#b8c8d7 !important}
-.ba{font-family:"Courier New",monospace}
-.ba input[type=range]{accent-color:var(--y2k-cyan) !important}
-#bf,#pbf{background:linear-gradient(90deg,var(--y2k-pink),var(--y2k-cyan)) !important; box-shadow:0 0 10px rgba(98,247,255,.32)}
-
-/* ---------- reproductor completo: look de deck Y2K ---------- */
-#playerFull{
-  position:fixed;
-  inset:0;
-  z-index:20;
-  overflow:auto !important;
-  background:
-    radial-gradient(700px 420px at 20% 34%,rgba(98,247,255,.13),transparent 66%),
-    radial-gradient(680px 460px at 83% 60%,rgba(255,88,221,.12),transparent 68%),
-    linear-gradient(155deg,#07111c,#04070c 52%,#100715) !important;
-  color:var(--y2k-text);
-}
-#playerFull::after{
-  content:"";
-  position:absolute;
-  inset:0;
-  pointer-events:none;
-  opacity:.11;
-  background:repeating-linear-gradient(0deg,rgba(255,255,255,.06) 0 1px,transparent 1px 4px);
-}
-.pf-top{
-  position:relative;
-  z-index:2;
-  padding-bottom:12px !important;
-  border-bottom:1px solid rgba(98,247,255,.20) !important;
-}
-.pf-top>span{
-  font:800 11px/1 "Courier New",monospace !important;
-  letter-spacing:.20em !important;
-  color:#93f3f7 !important;
-}
-.pf-top>span::before{content:"Y2K DIGITAL AUDIO  •  "; color:var(--y2k-pink)}
-.closefull{
-  background:radial-gradient(circle at 35% 28%,#d8e1e8,#58697a 55%,#192636) !important;
-  color:#06101a !important;
-  border:1px solid rgba(255,255,255,.62) !important;
-  box-shadow:inset 0 1px rgba(255,255,255,.85),0 0 24px rgba(98,247,255,.12);
+.fi input:focus, .fi select:focus {
+  border-color: #0ff !important;
+  box-shadow: 0 0 8px #0ff !important;
 }
 
-/* CD / disco */
-.pf-art{
-  position:relative !important;
-  overflow:hidden !important;
-  border-radius:50% !important;
-  width:min(76vw,450px) !important;
-  aspect-ratio:1 !important;
-  background:
-    radial-gradient(circle at 34% 28%,rgba(255,255,255,.96) 0 1.3%,rgba(255,255,255,.28) 4%,transparent 14%),
-    conic-gradient(from 12deg,#f5fdff,#7f93a4,#ffffff,#64798b,#fff,#92a6b6,#f8ffff,#a6b9c7,#fff,#698194) !important;
-  border:7px solid rgba(224,242,250,.88) !important;
-  box-shadow:
-    inset 0 0 0 7px rgba(255,255,255,.28),
-    inset 0 0 0 14px rgba(11,17,31,.22),
-    inset 0 -30px 42px rgba(0,0,0,.26),
-    0 24px 55px rgba(0,0,0,.52),
-    0 0 34px rgba(98,247,255,.15),
-    0 0 32px rgba(255,88,221,.12) !important;
+/* LISTA DE CANCIONES (Cero Lag - Adiós a los gradientes radiales pesados) */
+#ls {
+  scrollbar-width: thin;
+  scrollbar-color: #0ff #111;
 }
-.pf-art::before{
-  content:"";
-  position:absolute;
-  inset:9%;
-  border-radius:50%;
-  border:1px solid rgba(255,255,255,.47);
-  box-shadow:0 0 0 14px rgba(255,255,255,.06),0 0 0 30px rgba(255,255,255,.05),0 0 0 47px rgba(255,255,255,.04);
-}
-.pf-art::after{
-  content:"";
-  position:absolute;
-  inset:8%;
-  border-radius:50%;
-  background:linear-gradient(115deg,transparent 0 20%,rgba(98,247,255,.40) 31%,transparent 39% 57%,rgba(255,88,221,.36) 68%,transparent 77%);
-  mix-blend-mode:screen;
-  transform:rotate(-16deg);
-  pointer-events:none;
-}
-.pf-art svg{display:none !important}
+#ls::-webkit-scrollbar { width: 8px; }
+#ls::-webkit-scrollbar-track { background: #111; border-left: 1px solid #333; }
+#ls::-webkit-scrollbar-thumb { background: var(--y2k-dark-chrome); border: 1px outset #666; }
 
-/* Hub central */
-.pf-art{isolation:isolate}
-.pf-art .hub{display:none}
-#playerFull .pf-art::marker{display:none}
-
-/* NOW PLAYING */
-.pf-title{
-  position:relative;
-  z-index:2;
-  margin:18px auto 10px !important;
-  padding:16px 18px 14px !important;
-  width:min(92vw,650px);
-  border:1px solid rgba(98,247,255,.24) !important;
-  border-radius:15px !important;
-  background:
-    radial-gradient(circle at 28% 35%,rgba(255,88,221,.08),transparent 24%),
-    linear-gradient(180deg,rgba(11,25,38,.94),rgba(4,12,21,.92)) !important;
-  box-shadow:inset 0 1px rgba(255,255,255,.08),0 14px 35px rgba(0,0,0,.25);
+.pi {
+  border-radius: 4px !important;
+  margin-bottom: 4px !important;
+  background: #151515 !important;
+  border: 1px solid #222 !important;
+  transition: none !important; /* Desactivar animaciones pesadas para evitar lag */
 }
-.pf-title::before{
-  content:"NOW PLAYING";
-  display:block;
-  margin-bottom:10px;
-  color:#8deef6;
-  font:800 10px/1 "Courier New",monospace;
-  letter-spacing:.22em;
+.pi:active {
+  background: #0ff !important;
+  color: #000 !important;
 }
-.pf-title::after{
-  content:"● DIGITAL     •     44.1kHz     •     STEREO";
-  display:block;
-  margin-top:10px;
-  color:var(--y2k-lime);
-  font:700 8px/1 "Courier New",monospace;
-  letter-spacing:.12em;
+.pi.ac {
+  background: #0033aa !important; /* Azul Windows 98 */
+  border-color: #0055ff !important;
+  box-shadow: inset 0 0 5px rgba(0,0,0,0.5) !important;
 }
-.pf-title b{
-  font-family:"Arial Black",Impact,sans-serif !important;
-  font-size:clamp(18px,3vw,32px) !important;
-  color:#f3fbff !important;
-  text-shadow:0 0 8px rgba(98,247,255,.24),0 0 16px rgba(255,88,221,.09);
+.pi.ac .nm {
+  color: #fff !important;
+  font-weight: bold;
 }
-.pf-title span{display:block;margin-top:5px;color:#9ab4c8 !important;font-size:13px !important}
-
-/* panel de controles */
-.pf-controls{
-  position:relative;
-  z-index:2;
-  width:min(92vw,650px) !important;
-  margin:0 auto !important;
-  padding:15px 16px 18px !important;
-  border:1px solid rgba(171,226,255,.28) !important;
-  border-radius:18px !important;
-  background:linear-gradient(180deg,rgba(40,56,73,.75),rgba(10,18,29,.95)) !important;
-  box-shadow:inset 0 1px rgba(255,255,255,.12),0 20px 44px rgba(0,0,0,.30);
-}
-.pf-controls::before{
-  content:"PLAY MODE: ▶ DIGITAL                         MP3 / DRIVE  •  ●";
-  display:block;
-  color:#91edf6;
-  font:800 8px/1 "Courier New",monospace;
-  letter-spacing:.12em;
-  margin-bottom:10px;
-  white-space:pre;
-}
-.pf-controls .ba{margin-top:0 !important}
-.pf-buttons{gap:12px !important;margin-top:9px !important}
-.pf-buttons .ico{
-  width:56px !important;height:48px !important;
-  border-radius:14px !important;
-}
-.pf-buttons #pfplay{
-  width:74px !important;height:74px !important;border-radius:50% !important;
-  background:radial-gradient(circle at 35% 28%,#fff,#ecffff 35%,#a9bdc8 58%,#566778 100%) !important;
-  color:#08111a !important;
-  border:1px solid #fff !important;
-  box-shadow:inset 0 1px rgba(255,255,255,.95),0 0 0 2px rgba(98,247,255,.16),0 0 28px rgba(255,88,221,.16) !important;
+.pi .cover {
+  border-radius: 2px !important;
+  border: 1px inset #555 !important;
+  background: #000 !important;
+  box-shadow: none !important;
 }
 
-/* ---------- escritorio: misma estética en horizontal ---------- */
-@media(min-width:900px){
-  #playerFull[style*="display: flex"]{
-    display:grid;
-    grid-template-columns:minmax(390px,500px) minmax(520px,720px);
-    grid-template-rows:auto minmax(0,1fr) auto;
-    align-items:center;
-    justify-content:center;
-    column-gap:clamp(45px,6vw,110px);
-    padding:34px 48px !important;
-  }
-  #playerFull[style*="display: flex"] .pf-top{grid-column:1/-1;align-self:start;width:100%}
-  #playerFull[style*="display: flex"] .pf-art{grid-column:1;grid-row:2;justify-self:center;width:min(34vw,480px) !important;margin:0 !important}
-  #playerFull[style*="display: flex"] .pf-title{grid-column:2;grid-row:2;align-self:center;margin:0 auto 16px !important}
-  #playerFull[style*="display: flex"] .pf-controls{grid-column:2;grid-row:3;align-self:end}
+/* REPRODUCTOR FLOTANTE TIPO WINAMP */
+footer {
+  background: var(--y2k-dark-chrome) !important;
+  border-top: 2px outset #6a7b8c !important;
+  box-shadow: 0 -5px 20px rgba(0,0,0,0.8), inset 0 1px 2px rgba(255,255,255,0.3) !important;
+  padding: 10px 10px 20px 10px !important;
+}
+
+/* PANTALLA LCD (NOW PLAYING) */
+.now {
+  background: var(--y2k-lcd-bg) !important;
+  border: 3px inset #334433 !important;
+  border-radius: 4px !important;
+  padding: 8px !important;
+  box-shadow: inset 0 0 15px rgba(0,0,0,0.8) !important;
+  margin-bottom: 8px !important;
+  position: relative;
+  overflow: hidden; /* Necesario para la animación marque */
+}
+#ti {
+  color: var(--y2k-lcd-text) !important;
+  font-family: "Courier New", monospace !important;
+  font-weight: bold !important;
+  text-transform: uppercase;
+  text-shadow: 0 0 6px rgba(57,255,20,0.6) !important;
+  /* Animación tipo Marquee en puro CSS */
+  display: inline-block;
+  white-space: nowrap;
+  animation: y2k-marquee 8s linear infinite;
+  min-width: 100%;
+}
+@keyframes y2k-marquee {
+  0% { transform: translateX(80%); }
+  100% { transform: translateX(-120%); }
+}
+#es {
+  color: #1b8a0b !important; /* Verde oscuro LCD */
+  font-family: "Courier New", monospace !important;
+  font-weight: bold;
+}
+.nowcover { display: none !important; } /* Ocultar cover en footer para que parezca LCD puro */
+
+/* BOTONES HARDWARE (Físicos) */
+.ico, .bt {
+  background: var(--y2k-chrome) !important;
+  border: 2px outset #fff !important;
+  color: #000 !important;
+  border-radius: 5px !important;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.4) !important;
+  font-family: "Arial", sans-serif !important;
+  font-weight: bold;
+}
+.ico:active, .bt:active {
+  border: 2px inset #fff !important;
+  background: #c5d3e0 !important;
+  transform: translateY(2px);
+  box-shadow: none !important;
+}
+#pl {
+  border-radius: 50% !important;
+  border: 3px outset #fff !important;
+  background: radial-gradient(circle at 30% 30%, #ff8888 0%, #ff0000 50%, #880000 100%) !important; /* Boton Play Rojo Y2K */
+  color: #fff !important;
+  width: 54px !important;
+  height: 54px !important;
+}
+#pl:active {
+  border: 3px inset #fff !important;
+  background: #cc0000 !important;
+}
+.md.on {
+  color: #000 !important;
+  background: #0ff !important;
+  box-shadow: 0 0 10px #0ff !important;
+}
+
+/* BARRA DE PROGRESO */
+.ba { margin-top: 5px !important; }
+.tm { font-family: "Courier New", monospace !important; color: #39ff14 !important; background: #000 !important; padding: 2px 4px !important; border: 1px inset #555 !important; border-radius: 3px !important; font-size: 10px !important; }
+input[type=range] {
+  -webkit-appearance: none;
+  background: #000 !important;
+  border: 2px inset #444 !important;
+  height: 14px !important;
+  border-radius: 7px;
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  background: var(--y2k-chrome);
+  border: 2px outset #fff;
+  border-radius: 50%;
+}
+#bf {
+  background: #00ff00 !important; /* Buffer verde sólido */
+  height: 6px !important;
+  top: 50%;
+  margin-top: -3px;
+  box-shadow: none !important;
+}
+
+/* REPRODUCTOR FULLSCREEN (PANTALLA COMPLETA) */
+#playerFull {
+  background: #000 !important;
+  background-image: repeating-linear-gradient(0deg, rgba(255,255,255,0.03) 0px, rgba(255,255,255,0.03) 1px, transparent 1px, transparent 3px) !important;
+}
+.pf-top {
+  background: var(--y2k-dark-chrome) !important;
+  border: 2px outset #555 !important;
+  color: #fff !important;
+  text-shadow: 1px 1px 0 #000 !important;
+}
+.closefull {
+  background: #ff0000 !important;
+  border: 2px outset #ffaaaa !important;
+  color: #fff !important;
+  font-weight: bold;
+}
+.pf-art {
+  border-radius: 0 !important;
+  border: 10px inset #333 !important;
+  background: #000 !important;
+  box-shadow: 0 0 20px #0ff !important;
+}
+.pf-art::before { display: none !important; }
+.pf-art::after { display: none !important; }
+
+.pf-title {
+  background: var(--y2k-lcd-bg) !important;
+  border: 4px inset #444 !important;
+  box-shadow: inset 0 0 20px #000 !important;
+}
+.pf-title b {
+  color: var(--y2k-lcd-text) !important;
+  font-family: "Courier New", monospace !important;
+  text-shadow: 0 0 8px #39ff14 !important;
+}
+.pf-title span { color: #1b8a0b !important; }
+
+.pf-controls {
+  background: var(--y2k-dark-chrome) !important;
+  border: 3px outset #666 !important;
 }
 
 @media(max-width:650px){
-  header{min-height:58px;padding:10px 12px !important}
-  header h1{font-size:13px !important}
-  header h1::before{content:"Y2K ✦ ";}
-  .fi{padding:8px 11px !important}
-  #ls{padding-bottom:174px !important}
-  footer{padding-top:8px !important}
-  footer::before{font-size:7px;margin-bottom:5px}
-  .controls{gap:4px !important}
-  #pl{width:50px !important;height:50px !important}
-  #playerFull{padding:calc(16px + env(safe-area-inset-top)) 14px calc(16px + env(safe-area-inset-bottom)) !important}
-  #playerFull::before{
-    content:"GOOD MUSIC ✦ BETTER DAYS ✦ Y2K";
-    position:absolute;left:16px;top:calc(55px + env(safe-area-inset-top));
-    color:rgba(98,247,255,.35);font:700 8px/1 "Courier New",monospace;letter-spacing:.18em;z-index:1;
-  }
-  .pf-art{width:min(82vw,360px) !important;margin:28px auto 0 !important}
-  .pf-title{width:94vw !important;margin-top:14px !important}
-  .pf-title b{font-size:clamp(17px,5.2vw,24px) !important}
-  .pf-controls{width:94vw !important;padding:12px 10px 14px !important}
-  .pf-controls::before{font-size:7px;letter-spacing:.08em}
-  .pf-buttons{gap:7px !important}
-  .pf-buttons .ico{width:50px !important;height:44px !important}
-  .pf-buttons #pfplay{width:66px !important;height:66px !important}
-}
-
-@media(prefers-reduced-motion:no-preference){
-  .pf-art{animation:y2kDiscSpin 20s linear infinite}
-  #playerFull .pf-art::after{animation:y2kDiscShine 4.2s ease-in-out infinite}
-  @keyframes y2kDiscSpin{to{transform:rotate(360deg)}}
-  @keyframes y2kDiscShine{0%,100%{opacity:.45;filter:saturate(.9)}50%{opacity:.95;filter:saturate(1.35)}}
+    .pf-buttons .ico{width: 48px !important; height: 40px !important;}
+    .pf-buttons #pfplay{width: 60px !important; height: 60px !important;}
 }
