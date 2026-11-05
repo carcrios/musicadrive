@@ -581,39 +581,24 @@ function salto(g) {
   audio.currentTime = Math.max(0, Math.min(audio.duration - 0.25, audio.currentTime + g));
   posicion();
 }
-function mediaInfo(s) {
-  if (!('mediaSession' in navigator)) return;
-  var g = tags[s.id] || {};
-  try {
-    navigator.mediaSession.metadata = new MediaMetadata({
-      title: g.t || s.n, artist: g.a || 'Google Drive', album: g.b || s.c || 'Mi Música',
-      artwork: [{ src: 'icon-192.png', sizes: '192x192', type: 'image/png' }, { src: 'icon-512.png', sizes: '512x512', type: 'image/png' }]
-    });
-  } catch (e) {}
-  posicion();
-}
-function posicion() {
-  if (!('mediaSession' in navigator) || !navigator.mediaSession.setPositionState) return;
-  var dur = Number(audio.duration), cur = Number(audio.currentTime) || 0, vel = Number(audio.playbackRate) || 1;
-  if (!isFinite(dur) || dur <= 0 || vel <= 0) return;
-  try {
-    navigator.mediaSession.setPositionState({ duration: dur, position: Math.max(0, Math.min(cur, dur)), playbackRate: vel });
-  } catch (e) {}
-}
-function limpiarPosicion() {
-  if (!('mediaSession' in navigator) || !navigator.mediaSession.setPositionState) return;
-  try { navigator.mediaSession.setPositionState(); } catch (e) {}
-}
 
 function controlesBloqueo() {
   if (!('mediaSession' in navigator)) return;
   var mh = function (a, f) { try { navigator.mediaSession.setActionHandler(a, f); } catch (e) {} };
+  
   mh('play', function () {
     deberia = true;
-    if (!audio.getAttribute('src') && or.length) { tocar(pos >= 0 ? pos : 0); return; }
+    if (!audio.src || audio.error) { if (or.length) tocar(pos >= 0 ? pos : 0); return; }
+    
+    // Auto-recuperacion si la conexion se cayo en la llamada
+    if (audio.readyState === 0 && audio.src) {
+      var t = audio.currentTime; audio.load(); audio.currentTime = t;
+    }
+    
     var pr = audio.play();
     if (pr && pr['catch']) pr['catch'](function (e) {});
   });
+  
   mh('pause', function () { deberia = false; audio.pause(); });
   mh('nexttrack', function () { sig(false); });
   mh('previoustrack', function () { ant(); });
@@ -633,6 +618,35 @@ function controlesBloqueo() {
     mh('seekforward', function (d) { salto((d && d.seekOffset) || SALTO_BLOQUEO); });
   }
 }
+
+function mediaInfo(s) {
+  if (!('mediaSession' in navigator)) return;
+  
+  controlesBloqueo(); // Re-vincular los controles del sistema siempre
+  
+  var g = tags[s.id] || {};
+  try {
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: g.t || s.n, artist: g.a || 'Google Drive', album: g.b || s.c || 'Mi Música',
+      artwork: [{ src: 'icon-192.png', sizes: '192x192', type: 'image/png' }, { src: 'icon-512.png', sizes: '512x512', type: 'image/png' }]
+    });
+  } catch (e) {}
+  posicion();
+}
+
+function posicion() {
+  if (!('mediaSession' in navigator) || !navigator.mediaSession.setPositionState) return;
+  var dur = Number(audio.duration), cur = Number(audio.currentTime) || 0, vel = Number(audio.playbackRate) || 1;
+  if (!isFinite(dur) || dur <= 0 || vel <= 0) return;
+  try {
+    navigator.mediaSession.setPositionState({ duration: dur, position: Math.max(0, Math.min(cur, dur)), playbackRate: vel });
+  } catch (e) {}
+}
+function limpiarPosicion() {
+  if (!('mediaSession' in navigator) || !navigator.mediaSession.setPositionState) return;
+  try { navigator.mediaSession.setPositionState(); } catch (e) {}
+}
+
 function guardarSesion() {
   var a = act();
   guardar(LL.sesion, { id: a ? a.id : null, seg: a ? (audio.currentTime || 0) : 0, vol: audio.volume, alea: alea, rep: rep, fc: fc });
@@ -740,8 +754,13 @@ $('pfpr').addEventListener('input',function(){if(isFinite(audio.duration))audio.
 $('pl').onclick = function () {
   if (!or.length) return;
   if (pos < 0) { tocar(0); return; }
-  if (!audio.src) { tocar(pos); return; }
-  if (audio.paused) { deberia = true; var pr = audio.play(); if (pr && pr['catch']) pr['catch'](function () {}); } 
+  if (!audio.src || audio.error) { tocar(pos); return; }
+  
+  if (audio.paused) { 
+    deberia = true; 
+    if (audio.readyState === 0 && audio.src) { var t = audio.currentTime; audio.load(); audio.currentTime = t; }
+    var pr = audio.play(); if (pr && pr['catch']) pr['catch'](function () {}); 
+  } 
   else { deberia = false; audio.pause(); }
 };
 $('si').onclick = function () { sig(false); };
@@ -814,29 +833,43 @@ audio.addEventListener('waiting', function () {
         var pr = audio.play(); if (pr && pr['catch']) pr['catch'](function(){});
       }
       recoveryTimer = null;
-    }, 5000);
+    }, 3000); // 3 segundos es mejor UX para recargar
   }
 });
 
 audio.addEventListener('ended', function () { sig(true); });
+
 audio.addEventListener('play', function () {
   deberia = true;
   $('i1').style.display = 'none'; $('i2').style.display = '';
   try { navigator.mediaSession.playbackState = 'playing'; } catch (e) {}
   posicion(); actualizarFull();
+  controlesBloqueo(); // Re-asegurar los controles del sistema al dar play
 });
+
 audio.addEventListener('pause', function () {
   $('i1').style.display = ''; $('i2').style.display = 'none';
   try { navigator.mediaSession.playbackState = 'paused'; } catch (e) {}
   guardarSesion(); actualizarFull();
 });
+
 audio.addEventListener('error', function () {
   if (!audio.src || cargando) return;
   var mediaError = audio.error; var code = mediaError ? mediaError.code : 0;
   if (code === 1) return;
   est('No se pudo reproducir el archivo.');
 });
+
 window.addEventListener('beforeunload', function () { liberarAudioBlob(); guardarSesion(); });
+
+// Fundamental para recuperar el control de los audífonos si el celular fue a otra app (Llamadas)
+document.addEventListener('visibilitychange', function () {
+  if (!document.hidden && audio.paused && act()) {
+     mediaInfo(act());
+     try { navigator.mediaSession.playbackState = 'paused'; } catch(e){}
+  }
+});
+
 document.addEventListener('keydown', function (e) {
   if (e.key === 'Escape' && $('playerFull').style.display === 'flex') { cerrarFull(); return; }
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
